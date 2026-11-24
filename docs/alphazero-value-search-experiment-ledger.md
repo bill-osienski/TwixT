@@ -325,6 +325,7 @@ knob) is not a new hypothesis.
 > **H-MX integration BUILT (model-free) on branch `hmx-integration`; returned for approval of the gated checks and the browser smoke (Post-closure entry 79, 2026-11-23).** From `abaf20be`: (i) `1cb35192` tracks `models/627c8d774df838a8/` byte-identical (graph `3beaeed1…`, data `cf78b17f…`, manifest `abf3931d…`, a packaging pin) with B1; tooling `ea342450` (closed JS gate `HMX_INTEGRATION_CHECK_AUTHORIZED`, seed preload, driver, derived wrapper, model-free tests); (ii) `cb404cf0` the swap (`model_manifest.js` `ecde544b…` → `054f9434…`, G3 binding diff exactly that file, aggregate `da0b86bf…` → `aa04f04c…`, binding unedited); (ii-b) `78d69fad` golden stage `protocol-hard-hmx` (`1c34252d…`). B1–B7 PASS; B6 equal at base, pre-swap and swap heads except three tests that need `<tree>/.venv` and fail in any linked worktree (identical at the base). Deviation: the swap is two commits, so the code-revert rollback reverts both (probed: restores the pre-swap tree exactly). `htb-integration-g1` stays at `abaf20be`; nothing loaded, served, deployed or pushed. See #222.
 > **H-MX integration CHECK: gated run COMPLETED, all nine checks PASS; browser smoke V INCOMPLETE (Post-closure entry 80, 2026-11-23/24).** One wrapper run from launch `f46e90a7` (`49e94245` + gate), exit 0, 7,635 s under KILL 14,400 s, gate restored, no survivors (closing commit `d1f709f8`): G0, S1, S2 PASS; A0/A1/A2 reproduce all 845 recorded challenger rows in-process, over WS and over REST; S4 easy/medium identical to the reference (`abaf20be`) and hard served by `627c8d774df838a8`; R1 (restart with `HARD_MODEL_MANIFEST`) and R2 (revert of `78d69fad` then `cb404cf0`) restore today's hard exactly (426/426 captures, 844/844 rows); R2 suites PASS with exactly the three linked-worktree `.venv` failures, cause confirmed in the log. V (`1e5a7a86`): one Chrome game, 27 plies, every AI move from `627c8d774df838a8` in protocol mode, server log clean, end display ran — but the client console was not observed during play, so V is not a PASS and deployment is not recommended yet. `htb-integration-g1` stays at `abaf20be`; nothing deployed or pushed. See #223.
 > **H-MX browser smoke attempt 2 (V2): PASS (Post-closure entry 81, 2026-11-24).** One browser-only game from `545f7cee` against the unseeded staged server (plain `node server/index.js`, Hard `627c8d774df838a8`, protocol), with console and WebSocket capture started before the game (`b5c16485`): 25 plies, Hard won; 13/13 AI moves, including the opening move, from `627c8d774df838a8` with protocol search and 200 simulations, all on the board; MCTS bar updated on both sides of ply 20; client console clean from page load to game end; no WS error frames, no fallback; server log clean; the win alert was raised and dismissed and the winner panel shown. With the gated check's PASS (entry 80) every §5 check now passes. Attempt 1's INCOMPLETE record stands unchanged. Gate closed; nothing deployed or pushed; deployment awaits the user's separate decision. See #224.
+> **H-MX LOCAL DEPLOYMENT: DONE, no rollback (Post-closure entry 82, 2026-11-24).** `htb-integration-g1` fast-forwarded `abaf20be` → `3108ba29` (`--ff-only`); the local product started by `npm start` with no model overrides serves Hard `627c8d774df838a8` in protocol mode, and the default model stays `c34b7ff3297c785a` (`/api/model-info`, `server_git_sha 3108ba29`); the game page answers on port 5500. Local only: nothing pushed, no hosted deployment, all gates closed. Rollback by restart with `HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json` (tested, entry 80 R1). See #225.
 
 ## Historical proposal check — programme now closed
 
@@ -2182,6 +2183,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 222. **H-MX integration build (2026-11-23, entry 79).** Do **not**: fast-forward `htb-integration-g1` to `hmx-integration`, restart the product on it, or open `HMX_INTEGRATION_CHECK_AUTHORIZED` before the user approves the gated checks (and then deployment, separately); revert only `cb404cf0` as the code rollback (revert `78d69fad` and `cb404cf0` together); edit the build's commits, the tracked artifact, `g3_binding.json` or the B2/D3 literals to make a later check pass; treat the three linked-worktree `.venv` failures as a product result or accept any other failure under that heading; link or create a `.venv` in a launch tree to hide them; or run the check from a tree whose `-ref` and `-revert` siblings are not the planned commits.
 223. **H-MX integration check and browser smoke (2026-11-23/24, entry 80).** Do **not**: re-run the gated check (it is spent and one-shot; its PASS stands on `d1f709f8`); relabel V as PASS, or recommend deployment, on the INCOMPLETE smoke (the client console was not observed during play); edit `v_record.json`, `v_server.log` or the run evidence; run another browser smoke without the user's approval, and if one is approved, start console tracking before the first move and expect the client's end-of-game `alert()` (it blocks browser automation until a person dismisses it); fast-forward `htb-integration-g1` or restart the product on the swap before the deployment decision; or merge the throwaway revert branch `hmx-integration-check-revert`.
 224. **H-MX browser smoke attempt 2 (2026-11-24, entry 81).** Do **not**: run a further browser smoke for this swap (V is now observed and PASSES; another game adds nothing to the §5 decision); edit or reinterpret attempt 1's `v_record.json` (it stays INCOMPLETE, superseded only by this new attempt); treat V2's PASS as a deployment approval (deployment, fast-forwarding `htb-integration-g1`, restarting the product server and pushing each need the user's own approval); or treat V2's single 25-ply game as strength evidence (strength rests on the match, entry 78).
+225. **H-MX local deployment (2026-11-24, entry 82).** Do **not**: push `htb-integration-g1` or any H-MX branch, or deploy to a hosted environment, without the user's own approval (only local deployment was approved); play a further smoke game for this swap (#224); roll back to `78c16a31c3dba37f` other than by the tested `HARD_MODEL_MANIFEST` restart override or the tested revert of `78d69fad` then `cb404cf0`; or read the local product's play as new strength evidence (strength rests on the match, entry 78).
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -13524,3 +13526,46 @@ The proposal note and revision 1 note above stay as written. This correction sup
   - `htb-integration-g1` stays at `abaf20be`; the main checkout still serves `78c16a31c3dba37f`. Gate closed;
     nothing deployed or pushed. The stale H-OP fix is untouched.
   - Next: the user's separate deployment decision. See #224.
+
+#### Post-closure entry 82 — H-MX local deployment: `htb-integration-g1` fast-forwarded to `3108ba29`, local product serving Hard `627c8d774df838a8` (2026-11-24)
+
+- **Test:** the local deployment of the H-MX swap, approved by the user on 2026-11-24 after every §5 check had
+  passed (entries 80 and 81). Fast-forward `htb-integration-g1`, start the product with `npm start`, and verify it.
+  On any startup or verification failure, stop it and restore `78c16a31c3dba37f` by the tested `HARD_MODEL_MANIFEST`
+  override.
+- **Hypothesis:** the product started the standard way, with no model overrides, serves the qualified export as Hard
+  in protocol mode and leaves the default model unchanged.
+- **Why it was plausible:** the swap is one `HARD_MODEL_ID` line. The gated run S1 showed the staged banner and
+  `/api/model-info`, and both browser attempts played against the same build.
+- **Prediction on record:** none stated in advance.
+- **What ran:**
+  - **Pre-checks.** `htb-integration-g1` was at `abaf20be`, and `abaf20be` is an ancestor of `3108ba29`. Ports 3001
+    and 5500 were free. None of `NODE_OPTIONS`, `HMX_SEED_QUEUE`, `HARD_MODE`, `MODEL_MANIFEST`,
+    `HARD_MODEL_MANIFEST` or `PORT` was set. The main checkout was clean apart from its two long-standing untracked
+    files.
+  - **Fast-forward.** `git merge --ff-only 3108ba29` in `/Users/bill/projects/TwixT_Game`. After it,
+    `HARD_MODEL_ID = '627c8d774df838a8'`. The export files hash to `abf3931d…` (manifest), `3beaeed1…` (graph) and
+    `cf78b17f…` (data). Every `*_AUTHORIZED` gate in the tree is false.
+  - **Start.** `npm start` (`node scripts/startServer.js`) from the main checkout, detached with `nohup`. The log
+    is at `~/Library/Logs/TwixT/npm-start-2026-11-24.log`. As it always does, the launcher validated the default
+    manifest and passed it to `server/index.js` as `MODEL_MANIFEST`, with `PORT=3001`; no Hard override was set. It
+    also opens the game page in the default browser, as it always does. No game was played.
+- **Result: DEPLOYED locally, no rollback.**
+  - **AI server.** `/api/model-info` reports `model_id c34b7ff3297c785a`, `hard_mode protocol`, `hard_model_id
+    627c8d774df838a8` and `engine.server_git_sha 3108ba29`. `/api/health` reports `ok` with the model loaded.
+  - **Banner.** It shows `Hard mode: protocol` and `Hard model id: 627c8d774df838a8`, from
+    `models/627c8d774df838a8/manifest.json`. Both ONNX graphs loaded, and the log has no error, warning or failure
+    line.
+  - **Game page.** `http://127.0.0.1:5500/` answers 200 ("TwixT 3D Game"); `TwixT.html` and
+    `assets/js/ai/alphaZeroClient.js` answer 200.
+  - **Processes.** `node scripts/startServer.js` (pid 90080, port 5500) and `node server/index.js` (pid 90088, port
+    3001).
+- **Did it match the prediction?** Not applicable; none was stated. The outcome is the one the §5 checks implied.
+- **Conclusion / status:** the H-MX export `627c8d774df838a8` is the local product's Hard model, in protocol mode.
+  - Today's previous Hard, `78c16a31c3dba37f`, stays on disk for rollback, either by restart with
+    `HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json` (tested, entry 80 R1) or by reverting `78d69fad` then
+    `cb404cf0` (tested, entry 80 R2).
+  - This entry is committed on `htb-integration-g1`. The running server's `server_git_sha` stays `3108ba29`, the
+    commit it started from; the served code is byte-identical.
+  - All gates are closed. No push and no hosted deployment were approved or done. The stale H-OP fix is untouched.
+    See #225.
