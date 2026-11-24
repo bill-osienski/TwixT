@@ -324,6 +324,7 @@ knob) is not a new hypothesis.
 > **H-MX integration proposal REVISED (revision 1) after review: D1–D4 decided; returned for build approval; nothing built, copied, loaded or run (proposal note, 2026-11-23).** Proposal `79f815f8…` supersedes revision 0 (`b72593fa…`). D1 byte-identical manifest; the export manifest's `provenance_note` ("`run export`") is corrected here: attempt 2's `run export-2` wrote it. D2 no new match. D3: the G3 binding test asserts the one changed bound file, `server/model_manifest.js` `ecde544b…` → `054f9434…`, and aggregate `da0b86bf…` → `aa04f04c…`; the historical binding and evidence stay intact. D4: I play a required browser game against the staged server, unseeded. Graph and data hashes cite both records; the manifest hash `abf3931d…` is in neither, so it is a packaging pin, checked to name the qualified pair. The build is model-free with exact commands; five model-loading suites move to the gated run. `htb-integration-g1` does not move until deployment. Prediction unchanged (all PASS, about 90%). `HARD_MODEL_ID` unchanged. See #221.
 > **H-MX integration BUILT (model-free) on branch `hmx-integration`; returned for approval of the gated checks and the browser smoke (Post-closure entry 79, 2026-11-23).** From `abaf20be`: (i) `1cb35192` tracks `models/627c8d774df838a8/` byte-identical (graph `3beaeed1…`, data `cf78b17f…`, manifest `abf3931d…`, a packaging pin) with B1; tooling `ea342450` (closed JS gate `HMX_INTEGRATION_CHECK_AUTHORIZED`, seed preload, driver, derived wrapper, model-free tests); (ii) `cb404cf0` the swap (`model_manifest.js` `ecde544b…` → `054f9434…`, G3 binding diff exactly that file, aggregate `da0b86bf…` → `aa04f04c…`, binding unedited); (ii-b) `78d69fad` golden stage `protocol-hard-hmx` (`1c34252d…`). B1–B7 PASS; B6 equal at base, pre-swap and swap heads except three tests that need `<tree>/.venv` and fail in any linked worktree (identical at the base). Deviation: the swap is two commits, so the code-revert rollback reverts both (probed: restores the pre-swap tree exactly). `htb-integration-g1` stays at `abaf20be`; nothing loaded, served, deployed or pushed. See #222.
 > **H-MX integration CHECK: gated run COMPLETED, all nine checks PASS; browser smoke V INCOMPLETE (Post-closure entry 80, 2026-11-23/24).** One wrapper run from launch `f46e90a7` (`49e94245` + gate), exit 0, 7,635 s under KILL 14,400 s, gate restored, no survivors (closing commit `d1f709f8`): G0, S1, S2 PASS; A0/A1/A2 reproduce all 845 recorded challenger rows in-process, over WS and over REST; S4 easy/medium identical to the reference (`abaf20be`) and hard served by `627c8d774df838a8`; R1 (restart with `HARD_MODEL_MANIFEST`) and R2 (revert of `78d69fad` then `cb404cf0`) restore today's hard exactly (426/426 captures, 844/844 rows); R2 suites PASS with exactly the three linked-worktree `.venv` failures, cause confirmed in the log. V (`1e5a7a86`): one Chrome game, 27 plies, every AI move from `627c8d774df838a8` in protocol mode, server log clean, end display ran — but the client console was not observed during play, so V is not a PASS and deployment is not recommended yet. `htb-integration-g1` stays at `abaf20be`; nothing deployed or pushed. See #223.
+> **H-MX browser smoke attempt 2 (V2): PASS (Post-closure entry 81, 2026-11-24).** One browser-only game from `545f7cee` against the unseeded staged server (plain `node server/index.js`, Hard `627c8d774df838a8`, protocol), with console and WebSocket capture started before the game (`b5c16485`): 25 plies, Hard won; 13/13 AI moves, including the opening move, from `627c8d774df838a8` with protocol search and 200 simulations, all on the board; MCTS bar updated on both sides of ply 20; client console clean from page load to game end; no WS error frames, no fallback; server log clean; the win alert was raised and dismissed and the winner panel shown. With the gated check's PASS (entry 80) every §5 check now passes. Attempt 1's INCOMPLETE record stands unchanged. Gate closed; nothing deployed or pushed; deployment awaits the user's separate decision. See #224.
 
 ## Historical proposal check — programme now closed
 
@@ -2180,6 +2181,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 221. **H-MX integration proposal, revision 1 (2026-11-23).** Adds to #220. Do **not**: cite the manifest hash `abf3931d…` as tested or recorded evidence (it is in neither the export record nor the match record; it is a packaging pin); edit the copied manifest to fix its `provenance_note` (the correction lives in this ledger); edit `tests/htb_integration/g3_binding.json` or any G3 evidence, or loosen §3.1's assertion, or change its literals (`ecde544b…`, `054f9434…`, `da0b86bf…`, `aa04f04c…`) to fit a build that differs from the proposal's diff; run `server/test_model_manifest.js`, `server/test_ort_conv_canary.js`, `server/test_ort_shutdown.js`, `tests/product_match/test_harness.mjs` or `tests/product_match/test_analyse.mjs` (or anything that creates an ONNX Runtime session or starts a server) during the build; recommend deployment without the browser smoke V's PASS, or run V with a seed preload or model environment override; commit on `htb-integration-g1` while `hmx-integration` is open.
 222. **H-MX integration build (2026-11-23, entry 79).** Do **not**: fast-forward `htb-integration-g1` to `hmx-integration`, restart the product on it, or open `HMX_INTEGRATION_CHECK_AUTHORIZED` before the user approves the gated checks (and then deployment, separately); revert only `cb404cf0` as the code rollback (revert `78d69fad` and `cb404cf0` together); edit the build's commits, the tracked artifact, `g3_binding.json` or the B2/D3 literals to make a later check pass; treat the three linked-worktree `.venv` failures as a product result or accept any other failure under that heading; link or create a `.venv` in a launch tree to hide them; or run the check from a tree whose `-ref` and `-revert` siblings are not the planned commits.
 223. **H-MX integration check and browser smoke (2026-11-23/24, entry 80).** Do **not**: re-run the gated check (it is spent and one-shot; its PASS stands on `d1f709f8`); relabel V as PASS, or recommend deployment, on the INCOMPLETE smoke (the client console was not observed during play); edit `v_record.json`, `v_server.log` or the run evidence; run another browser smoke without the user's approval, and if one is approved, start console tracking before the first move and expect the client's end-of-game `alert()` (it blocks browser automation until a person dismisses it); fast-forward `htb-integration-g1` or restart the product on the swap before the deployment decision; or merge the throwaway revert branch `hmx-integration-check-revert`.
+224. **H-MX browser smoke attempt 2 (2026-11-24, entry 81).** Do **not**: run a further browser smoke for this swap (V is now observed and PASSES; another game adds nothing to the §5 decision); edit or reinterpret attempt 1's `v_record.json` (it stays INCOMPLETE, superseded only by this new attempt); treat V2's PASS as a deployment approval (deployment, fast-forwarding `htb-integration-g1`, restarting the product server and pushing each need the user's own approval); or treat V2's single 25-ply game as strength evidence (strength rests on the match, entry 78).
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -13459,3 +13461,66 @@ The proposal note and revision 1 note above stay as written. This correction sup
   - Left untouched: the stale H-OP fix and the running-server question.
   - Next needs the user's decision: either accept V as observed, or approve one further browser smoke with console
     tracking started before the first move. Deployment needs its own approval after that. See #223.
+
+#### Post-closure entry 81 — H-MX browser smoke attempt 2 (V2): PASS, console and WebSocket captured from before the first move to game end (2026-11-24)
+
+- **Test:** the browser smoke V of proposal revision 1 (§5.6), a second attempt after entry 80's V was INCOMPLETE.
+  One full browser game against the unseeded staged server, with every V criterion observed.
+- **Hypothesis:** an unseeded staged server serves `627c8d774df838a8` to the real client in a full game. Every AI
+  move arrives from that model and is drawn, the MCTS bar updates before and after ply 20, the client console stays
+  clean throughout, and the game ends normally.
+- **Why it was plausible:** attempt 1 observed every criterion except the console during play, and its post-game
+  console read was clean. The gated run (entry 80) showed the staged server reproduces the match exactly.
+- **Prediction on record:** none stated in advance for this attempt. The proposal's §5.7 prediction (all checks
+  PASS, about 90%) covers V.
+- **What ran:** the user's approval of 2026-11-24 for one browser-only smoke from `545f7cee`.
+  - **Server.** From the launch tree `/Users/bill/projects/TwixT_Game-hmx-check`, clean at `545f7cee`, by
+    `env -u NODE_OPTIONS -u HMX_SEED_QUEUE -u HARD_MODE -u MODEL_MANIFEST -u HARD_MODEL_MANIFEST -u PORT
+    node server/index.js` on port 3001. There was no preload, so seeding was normal. The banner shows `Hard mode:
+    protocol`, `Hard model id: 627c8d774df838a8`, and onnxruntime-node 1.23.2 resolved from the tree. Ports 3001
+    and 5500 were free before; no other server was running.
+  - **Gate.** `HMX_INTEGRATION_CHECK_AUTHORIZED` stayed `false`; nothing was opened.
+  - **Page.** `python3 -m http.server 5500 --bind 127.0.0.1` from the same tree.
+  - **Capture order.** Each step came before the game started:
+    - Claude in Chrome's console tracking was started on `http://127.0.0.1:5500/` before the game page loaded; it
+      then returned the six page-load lines.
+    - In-page capture was installed: a console wrapper; window `error` and `unhandledrejection` listeners; a
+      WebSocket constructor proxy with a `send` wrapper attaching a message listener; an `alert` wrapper that records
+      the text and calls the original; and a MutationObserver on `#win-bar-mcts`.
+    - Only then were 1 Player Mode and Hard clicked. That click sends the AI's opening request, `req_1`, which was
+      captured.
+  - **Game.** Claude played Red by real clicks on the board canvas at projected hole positions; Hard played Black and
+    moved first.
+  - **Evidence.** `docs/superpowers/evidence/hmx-integration-check/v2/`, commit `b5c16485`: `v2_record.json`
+    (`d3e7d296…`), `v2_console.txt`, `v2_server.log` (`9502915b…`, byte-identical to attempt 1's, since the server
+    logs only its banner) and `v2_static.log` (`0d26aee7…`).
+- **Result: PASS.**
+  - **Outcome.** 25 plies; Hard (Black) won.
+  - **AI moves.** 13/13 have source `alphazero` in the client's move log, so none fell back. All 13 `bestmove` frames
+    (`req_1`–`req_13`, `difficulty: hard`, request plies 0–24) carry `modelId 627c8d774df838a8`, `search: protocol`
+    and `nSimulations 200`. Each move equals the client's logged move and sits on the game board as a Black peg;
+    screenshots show them drawn. Search elapsed 1,355–1,430 ms, and 577 ms for the winning move.
+  - **WebSocket.** One connection, never closed. 212 frames received: 13 `bestmove` and 199 `progress` (16 per
+    request; 15 for `req_12`; 8 for `req_13`), with 0 `error` or other frames. The client also sent 12 `cancel`
+    frames, each for the previous, already-answered id just before the next request (its `cancelLast`).
+  - **MCTS bar.** `#win-bar-mcts` updated after every AI move: plies 1–19 and 21, 23, 25, so on both sides of ply 20
+    (Red 36% after ply 1, falling to 0%). As in attempt 1, the client wires no in-search progress display.
+  - **Console.** 38 messages from page load to game end, all `LOG`: 13 `AlphaZero move: … sims: 200` and 25
+    `[Move n]` lines. An `onlyErrors` read found nothing. The in-page capture agrees: 38 entries, all level log, no
+    window errors, no unhandled rejections.
+  - **End of game.** One alert, "🎉 Black Player Wins! 🎉", 203 ms after the winning `bestmove`. It blocked the page
+    as expected and was dismissed in the user's Chrome. After that, `gameOver` was true, the winner was black, and the
+    panel showed "Black Wins!" with Play Again.
+  - **Logs.** The server log is clean. The static host logged 21 lines, 2 × 200 and 19 × 304, with no errors.
+  - **Shutdown.** Both smoke servers were stopped; ports 3001 and 5500 were free afterwards, with no server process
+    left. The tab was closed.
+- **Did it match the prediction?** Not applicable to this attempt on its own. With entry 80, the §5.7 prediction (all
+  checks PASS) is now matched in full. Starting the console tool on the same origin before loading the game page
+  closed attempt 1's gap.
+- **Conclusion / status:** V PASSES. Every check in proposal §5 has now passed: the gated run (entry 80, `d1f709f8`)
+  and V (this entry, `b5c16485`). Attempt 1's INCOMPLETE record stays as written.
+  - The evidence and this entry are on `hmx-integration-check-launch`, to be fast-forwarded into `hmx-integration`
+    as its own step.
+  - `htb-integration-g1` stays at `abaf20be`; the main checkout still serves `78c16a31c3dba37f`. Gate closed;
+    nothing deployed or pushed. The stale H-OP fix is untouched.
+  - Next: the user's separate deployment decision. See #224.
