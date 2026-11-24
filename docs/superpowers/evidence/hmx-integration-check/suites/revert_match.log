@@ -1,0 +1,130 @@
+▶ determinism
+  ✔ regenerating reproduces the committed pool byte for byte (48.700042ms)
+  ✔ would actually notice a formatting-only change (48.493833ms)
+  ✔ uses the frozen seed and PRNG the specification names (0.055333ms)
+✔ determinism (97.65925ms)
+▶ legality — re-derived, not trusted
+  ✔ every move was legal at the moment it was played (28.368625ms)
+  ✔ every opening is exactly four plies, two moves per side (0.445959ms)
+  ✔ moves are well-formed coordinates inside the board (0.202875ms)
+  ✔ recorded side to move, legal count and terminal status all re-derive (8.208125ms)
+✔ legality — re-derived, not trusted (37.382875ms)
+▶ non-terminal, with real choices remaining
+  ✔ no opening is terminal (4.959042ms)
+  ✔ every opening leaves at least two legal continuations (3.805ms)
+  ✔ the continuations are genuinely playable, not merely counted (0.284ms)
+✔ non-terminal, with real choices remaining (9.168542ms)
+▶ uniqueness
+  ✔ all 210 openings are distinct under the canonical position key (0.630792ms)
+  ✔ move sequences are themselves distinct (0.074583ms)
+  ✔ the key distinguishes bridge layout, not only pegs (0.041667ms)
+✔ uniqueness (0.795ms)
+▶ pool shape and the match/timing split
+  ✔ holds exactly 210 openings with ids 0…209 in order (0.046ms)
+  ✔ reserves 0…199 for the match and 200…209 for timing (0.062ms)
+  ✔ the two sets are disjoint, so timing can never leak into the match (0.042417ms)
+  ✔ any P selects a PREFIX of the match set, never a chosen subset (0.049875ms)
+✔ pool shape and the match/timing split (0.242083ms)
+▶ seed and rejection accounting
+  ✔ every drawn seed is accounted for, with none unexplained (0.070791ms)
+  ✔ seeds are handed out in opening order, one per attempt (0.038167ms)
+  ✔ records zero rejections, and says why rather than hiding it (0.054792ms)
+✔ seed and rejection accounting (0.193209ms)
+▶ the rejection rule actually works
+  ✔ accepts a qualifying position (0.077916ms)
+  ✔ rejects a game that ended before the target ply (0.026ms)
+  ✔ rejects a terminal position (0.023667ms)
+  ✔ rejects a position with a single forced continuation (0.025042ms)
+  ✔ rejects a duplicate position and names what it duplicates (0.059458ms)
+  ✔ playOpening reports an unreachable depth rather than silently truncating (0.149666ms)
+✔ the rejection rule actually works (0.407833ms)
+▶ the pool feeds its consumers in the shape they expect
+  ✔ yields bare four-move arrays from the committed pool (0.10525ms)
+  ✔ is idempotent, so a caller cannot be wrong about which shape it holds (0.032417ms)
+  ✔ refuses a pool that is not openings at all (0.146459ms)
+  ✔ the extracted moves replay exactly as the recorded openings do (0.279375ms)
+✔ the pool feeds its consumers in the shape they expect (0.614792ms)
+▶ scope: no model, no game
+  ✔ the generator imports nothing that could load a model or play a game (3.70375ms)
+  ✔ carries no model-derived quantity (0.238166ms)
+✔ scope: no model, no game (4.007667ms)
+▶ P is derived mechanically, never chosen
+  ✔ applies the frozen rule at, above and below the threshold (0.234ms)
+  ✔ permits no third outcome (0.063125ms)
+  ✔ refuses a throughput that is not a number (0.140833ms)
+✔ P is derived mechanically, never chosen (0.790083ms)
+▶ throughput is one wall-clock span
+  ✔ uses the exact formula from the specification (0.065208ms)
+  ✔ refuses a non-positive span rather than dividing by it (0.050167ms)
+✔ throughput is one wall-clock span (0.175041ms)
+▶ the timing schedule is frozen and outcome-blind
+  ✔ is ten games, five per self-play arm, in the specified order (0.322542ms)
+  ✔ touches only the reserved openings, never a match opening (0.049917ms)
+  ✔ the frozen mapping cannot be mutated in place (0.04275ms)
+✔ the timing schedule is frozen and outcome-blind (0.493166ms)
+▶ runTimingSmoke, with the clock and games injected
+  ✔ writes exactly ten timing sidecars, in its own namespace (0.353791ms)
+  ✔ marks every sidecar as timing, self-play, on a reserved opening (0.893083ms)
+  ✔ opens the span at the pre-search seam and closes it at the last rename (0.0605ms)
+  ✔ derives the decision from that span alone (0.02875ms)
+  ✔ records the pool and surface digests it was given, not ones read later (0.020292ms)
+  ✔ hashes the evidence as written to disk (0.806833ms)
+  ✔ produces a decision that validates (0.234ms)
+✔ runTimingSmoke, with the clock and games injected (9.639875ms)
+▶ the decision validator re-derives rather than trusting
+  ✔ accepts a well-formed decision (control) (0.18975ms)
+  ✔ rejects a P that its own throughput does not imply (0.085709ms)
+  ✔ rejects a throughput that its own wall time does not imply (0.0455ms)
+  ✔ rejects a restated threshold (0.039166ms)
+  ✔ rejects a P outside the two permitted values (0.038333ms)
+  ✔ rejects an altered opening mapping (0.035791ms)
+  ✔ rejects the wrong number of timing games (0.039625ms)
+  ✔ requires exactly the schedule-derived filenames, not ten arbitrary ones (0.062916ms)
+  ✔ rejects two different files carrying the SAME digest (0.035292ms)
+  ✔ rejects malformed digests (0.030666ms)
+  ✔ rejects missing required fields before comparing anything (0.03525ms)
+  ✔ rejects a decision bound to a different pool, surface or settings (0.062542ms)
+  ✔ rejects a non-object (0.022083ms)
+✔ the decision validator re-derives rather than trusting (0.826541ms)
+▶ committed means committed, not merely tracked
+  ✔ accepts a committed, fully bound decision (232.415833ms)
+fatal: path 'tests/product_match/p_decision.json' exists on disk, but not in 'HEAD'
+  ✔ REFUSES a decision that is staged but never committed (131.5015ms)
+fatal: path 'tests/product_match/p_decision.json' exists on disk, but not in 'HEAD'
+  ✔ REFUSES a decision that exists only in the working tree (119.831167ms)
+  ✔ reads the COMMITTED bytes when the working tree was edited afterwards (212.240042ms)
+  ✔ refuses committed content that is unparseable (139.802208ms)
+  ✔ refuses a committed decision whose P its own throughput does not imply (206.332833ms)
+  ✔ refuses a decision bound to a different execution surface (201.852166ms)
+  ✔ notices when an execution-surface file changes AFTER the decision (229.04775ms)
+  ✔ refuses a decision bound to a different pool (204.22925ms)
+  ✔ refuses a decision bound to different search settings (201.329875ms)
+✔ committed means committed, not merely tracked (1906.412125ms)
+▶ nothing may run a match without the committed decision
+  ✔ the decision IS committed in this repository, and reads as a blob (12.422292ms)
+  ✔ the committed decision loads and validates as P = 100 at the MATCH commit (135.977291ms)
+  ✔ at HEAD the completed decision REFUSES — it cannot authorize another match (195.133208ms)
+  ✔ the working-tree decision is byte-identical to the committed blob (8.94625ms)
+  ✔ the production analyser refuses an empty run even with a decision committed (205.252625ms)
+  ✔ the production analyser refuses a run with no commit in its fingerprint (0.9265ms)
+  ✔ the evidence pipeline rejects a P that disagrees with the decision (0.6905ms)
+  ✔ neither production API accepts a caller-supplied pool or standard (0.269291ms)
+  ✔ the frozen standard cannot be mutated in memory (0.144875ms)
+  ✔ a mutated standard cannot change a computed interval (4.095709ms)
+  ✔ other exported constants are frozen too (0.062875ms)
+  ✔ the analysis implementation is itself inside the execution surface (0.023292ms)
+  ✔ the production analyser has no opt-out and no run.json fallback (0.468042ms)
+  ✔ the unchecked core is named so its nature is visible at every call site (0.188709ms)
+✔ nothing may run a match without the committed decision (565.596958ms)
+▶ scope: this test file runs no timing game
+  ✔ imports no way to run a real timing game (0.367042ms)
+  ✔ the suite creates no match output in the repository (0.13525ms)
+✔ scope: this test file runs no timing game (0.549333ms)
+ℹ tests 86
+ℹ suites 17
+ℹ pass 86
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2526.401959

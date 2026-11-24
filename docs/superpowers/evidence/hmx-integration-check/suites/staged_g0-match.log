@@ -1,0 +1,246 @@
+▶ statistics are exactly determined
+  ✔ the bootstrap is reproducible and uses the frozen order statistics (7.658958ms)
+  ✔ a degenerate sample yields a degenerate interval (0.764459ms)
+  ✔ the t interval uses the frozen critical value (0.093625ms)
+  ✔ refuses a P the specification does not allow (0.146ms)
+  ✔ requires both methods to agree, in either direction (0.074ms)
+  ✔ classifies three-valued, so weaker and inconclusive do not "agree" (0.039709ms)
+✔ statistics are exactly determined (9.18775ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+▶ the committed pool flows through both consumers unchanged
+  ✔ runMatch and analyse both accept the real openings.json object (3550.58725ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ also accepts the bare openings array, so neither shape is privileged (3398.136125ms)
+  ✔ rejects a pool that is not openings at all, rather than throwing (0.189584ms)
+✔ the committed pool flows through both consumers unchanged (6949.136125ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+▶ analysis of a real run
+  ✔ accepts a well-formed run and reaches a decision (15.410833ms)
+  ✔ the fixture really is complete, or every negative test is vacuous (0.123709ms)
+  ✔ rejects a timing sidecar in the match namespace (2.822875ms)
+  ✔ rejects a run missing a game, measured against the committed P (2.006125ms)
+  ✔ rejects an incomplete pair even when the total count is right (17.375875ms)
+  ✔ rejects a run analysed against a larger committed P (2.728292ms)
+  ✔ rejects a run with no committed metadata (1.421125ms)
+  ✔ rejects run metadata with no fingerprint at all (1.251458ms)
+  ✔ rejects run metadata whose fingerprint is incomplete (1.737125ms)
+  ✔ rejects a P the specification does not support, before any replay (1.414667ms)
+  ✔ rejects a fingerprint that is not the committed run (16.825875ms)
+  ✔ rejects a sidecar missing required fields (2.216667ms)
+  ✔ rejects a sidecar carrying unexpected fields (2.073ms)
+  ✔ rejects an empty match directory instead of throwing (0.89ms)
+  ✔ rejects both games of a pair sharing a slot (15.188916ms)
+  ✔ rejects opening_id that is not pair_index (15.761458ms)
+  ✔ rejects an opening set that is not the frozen prefix (11.333708ms)
+  ✔ rejects fingerprint drift across sidecars (16.52275ms)
+  ✔ rejects a run whose simulation count is not the specified one (16.60225ms)
+  ✔ rejects a P the frozen specification does not allow (2.388459ms)
+  ✔ rejects a colour set that is not the two roles (16.103416ms)
+  ✔ rejects a colour assignment that contradicts game_in_pair (16.165333ms)
+  ✔ rejects a tampered result even when internally consistent (15.689375ms)
+  ✔ rejects a tampered candidate_score (16.534208ms)
+  ✔ rejects a tampered ply count (14.82425ms)
+  ✔ rejects a tampered termination reason (16.145833ms)
+  ✔ rejects an illegal move in the sequence (14.564708ms)
+  ✔ rejects a truncated game that never reached a terminal state (14.077041ms)
+  ✔ rejects moves that do not start with the declared opening (17.838542ms)
+  ✔ rejects an opening hash that does not match the pool (14.904625ms)
+✔ analysis of a real run (3332.138167ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+▶ model loading mirrors the product
+  ✔ loads both committed artifacts and reports their ids (0.254208ms)
+  ✔ performs the contract check, which resolveModel cannot do (0.30625ms)
+  ✔ refuses a manifest whose bytes do not match (0.5035ms)
+✔ model loading mirrors the product (22.975666ms)
+▶ execution commit
+  ✔ reports HEAD, and refuses a dirty worktree (88.119834ms)
+✔ execution commit (88.2095ms)
+▶ playGame
+  ✔ plays to a real terminal state and reports it consistently (634.134542ms)
+  ✔ is deterministic: the same inputs replay identically (785.933375ms)
+  ✔ swapping colours changes the game, so the pairing is not a no-op (1572.282041ms)
+  ✔ takes the readout temperature from the shipped table, and ignores a caller override (655.120625ms)
+  ✔ rejects an illegal opening rather than playing from a bad position (0.401ms)
+✔ playGame (3652.170916ms)
+▶ sidecar construction
+  ✔ game_in_pair 0 puts the candidate on red (0.349125ms)
+  ✔ game_in_pair 1 puts the candidate on black (0.074ms)
+  ✔ scores a draw as 0.5 from either colour (0.061667ms)
+  ✔ the fingerprint fields exclude the colours that swap (0.105125ms)
+✔ sidecar construction (0.694958ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+▶ runMatch and resumption
+  ✔ plays complete pairs and writes no temp files behind (1913.52175ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ skips completed pairs on a clean re-run (26.482417ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ quarantines a half-finished pair, replays it, and verifies the replay (1814.669375ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ aborts when a replay does not reproduce the quarantined game (1227.161916ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ validates existing sidecars on restart instead of trusting filenames (1080.562208ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ validates a half-pair survivor before quarantining it (521.46975ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ never overwrites a quarantine record, however often it is interrupted (1705.832333ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ still owes the comparison after a crash between quarantine and replay (1252.066833ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ re-checks a completed pair against its quarantine history on later restarts (1276.578916ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ cannot be talked into accepting swapped roles (11.662917ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ refuses to play if a model directory holds the wrong role (11.234834ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ refuses to resume under a different configuration (18.885667ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ refuses to resume with a different P (18.499625ms)
+  ✔ records a run fingerprint that every sidecar shares (0.584375ms)
+✔ runMatch and resumption (10883.000167ms)
+ℹ tests 66
+ℹ suites 8
+ℹ pass 66
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14693.821042

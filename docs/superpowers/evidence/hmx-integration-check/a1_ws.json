@@ -1,0 +1,9313 @@
+{
+ "verdict": "PASS",
+ "rows": 845,
+ "equal": 845,
+ "failures": [],
+ "failureCount": 0,
+ "seedProblems": [],
+ "banner": [
+  "HMX_SEED_PRELOAD 1690 values from /Users/bill/projects/TwixT_Game-hmx-check/docs/superpowers/evidence/hmx-integration-check/servers/a1_ws.seeds.json",
+  "Model id:   c34b7ff3297c785a",
+  "Manifest:   /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/manifest.json",
+  "Hard mode:  protocol",
+  "Hard model id:   627c8d774df838a8",
+  "Hard manifest:   /Users/bill/projects/TwixT_Game-hmx-check/models/627c8d774df838a8/manifest.json"
+ ],
+ "answers": [
+  {
+   "move": [
+    8,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1361
+  },
+  {
+   "move": [
+    7,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    13,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    6,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1324
+  },
+  {
+   "move": [
+    18,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    6,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    15,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    10,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1327
+  },
+  {
+   "move": [
+    7,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    6,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1353
+  },
+  {
+   "move": [
+    9,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    9,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    20,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 127
+  },
+  {
+   "move": [
+    9,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    11,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    6,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    8,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    6,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1355
+  },
+  {
+   "move": [
+    7,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    9,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    10,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    7,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    5,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    8,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    10,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    8,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    10,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    9,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 689
+  },
+  {
+   "move": [
+    11,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1346
+  },
+  {
+   "move": [
+    9,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1348
+  },
+  {
+   "move": [
+    13,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    5,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    7,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    21,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    3,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    23,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    17,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    1,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1291
+  },
+  {
+   "move": [
+    0,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 685
+  },
+  {
+   "move": [
+    17,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    11,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1319
+  },
+  {
+   "move": [
+    6,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    2,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    11,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1327
+  },
+  {
+   "move": [
+    4,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    12,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1327
+  },
+  {
+   "move": [
+    15,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    22,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1248
+  },
+  {
+   "move": [
+    21,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 447
+  },
+  {
+   "move": [
+    21,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 127
+  },
+  {
+   "move": [
+    7,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    11,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    5,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    9,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    18,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    14,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    3,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    20,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    15,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    13,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    22,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    1,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    0,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1333
+  },
+  {
+   "move": [
+    23,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 638
+  },
+  {
+   "move": [
+    16,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1327
+  },
+  {
+   "move": [
+    20,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1326
+  },
+  {
+   "move": [
+    12,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1323
+  },
+  {
+   "move": [
+    19,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1322
+  },
+  {
+   "move": [
+    7,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    8,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1324
+  },
+  {
+   "move": [
+    14,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    11,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    22,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    21,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    4,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1355
+  },
+  {
+   "move": [
+    2,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1302
+  },
+  {
+   "move": [
+    3,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 130
+  },
+  {
+   "move": [
+    12,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    14,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    8,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1348
+  },
+  {
+   "move": [
+    10,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1348
+  },
+  {
+   "move": [
+    4,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    18,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    6,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    2,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    20,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    22,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    0,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    23,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 688
+  },
+  {
+   "move": [
+    19,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1322
+  },
+  {
+   "move": [
+    4,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1324
+  },
+  {
+   "move": [
+    12,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1326
+  },
+  {
+   "move": [
+    3,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    3,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1327
+  },
+  {
+   "move": [
+    17,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    1,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1319
+  },
+  {
+   "move": [
+    3,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1326
+  },
+  {
+   "move": [
+    20,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    18,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    11,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    1,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 127
+  },
+  {
+   "move": [
+    6,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    9,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1358
+  },
+  {
+   "move": [
+    5,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1349
+  },
+  {
+   "move": [
+    8,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    12,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    13,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    11,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1346
+  },
+  {
+   "move": [
+    14,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    9,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    12,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    11,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    15,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    5,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    9,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1349
+  },
+  {
+   "move": [
+    10,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1346
+  },
+  {
+   "move": [
+    16,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1350
+  },
+  {
+   "move": [
+    19,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1350
+  },
+  {
+   "move": [
+    8,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1352
+  },
+  {
+   "move": [
+    14,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1352
+  },
+  {
+   "move": [
+    10,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1355
+  },
+  {
+   "move": [
+    4,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1363
+  },
+  {
+   "move": [
+    6,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1359
+  },
+  {
+   "move": [
+    7,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1364
+  },
+  {
+   "move": [
+    4,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1270
+  },
+  {
+   "move": [
+    2,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1351
+  },
+  {
+   "move": [
+    11,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1361
+  },
+  {
+   "move": [
+    9,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1349
+  },
+  {
+   "move": [
+    13,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1357
+  },
+  {
+   "move": [
+    17,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1361
+  },
+  {
+   "move": [
+    15,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1359
+  },
+  {
+   "move": [
+    13,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1362
+  },
+  {
+   "move": [
+    12,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1357
+  },
+  {
+   "move": [
+    13,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1363
+  },
+  {
+   "move": [
+    15,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1360
+  },
+  {
+   "move": [
+    18,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1366
+  },
+  {
+   "move": [
+    11,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1369
+  },
+  {
+   "move": [
+    6,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1370
+  },
+  {
+   "move": [
+    10,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1360
+  },
+  {
+   "move": [
+    16,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1371
+  },
+  {
+   "move": [
+    14,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1365
+  },
+  {
+   "move": [
+    13,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1362
+  },
+  {
+   "move": [
+    20,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1369
+  },
+  {
+   "move": [
+    22,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1372
+  },
+  {
+   "move": [
+    1,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 479
+  },
+  {
+   "move": [
+    23,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1365
+  },
+  {
+   "move": [
+    0,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 703
+  },
+  {
+   "move": [
+    8,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1351
+  },
+  {
+   "move": [
+    6,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    6,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    9,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    7,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    8,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    9,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    10,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    11,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    8,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    9,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    10,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    10,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 689
+  },
+  {
+   "move": [
+    11,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1353
+  },
+  {
+   "move": [
+    13,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1352
+  },
+  {
+   "move": [
+    9,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    16,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1324
+  },
+  {
+   "move": [
+    11,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1333
+  },
+  {
+   "move": [
+    12,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    15,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1326
+  },
+  {
+   "move": [
+    10,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    12,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    15,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1349
+  },
+  {
+   "move": [
+    13,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1348
+  },
+  {
+   "move": [
+    15,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1350
+  },
+  {
+   "move": [
+    16,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 127
+  },
+  {
+   "move": [
+    10,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    19,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1322
+  },
+  {
+   "move": [
+    11,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    10,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1326
+  },
+  {
+   "move": [
+    4,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1323
+  },
+  {
+   "move": [
+    4,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    21,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1326
+  },
+  {
+   "move": [
+    20,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    19,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    1,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    2,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    2,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    12,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 125
+  },
+  {
+   "move": [
+    14,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1350
+  },
+  {
+   "move": [
+    16,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    10,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    8,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    4,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    18,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    12,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    20,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    6,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    22,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    3,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    2,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    1,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    0,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    23,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 684
+  },
+  {
+   "move": [
+    3,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1325
+  },
+  {
+   "move": [
+    8,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1326
+  },
+  {
+   "move": [
+    10,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1324
+  },
+  {
+   "move": [
+    2,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    5,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1325
+  },
+  {
+   "move": [
+    7,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    21,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1322
+  },
+  {
+   "move": [
+    17,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1325
+  },
+  {
+   "move": [
+    21,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    19,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    13,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1349
+  },
+  {
+   "move": [
+    3,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1346
+  },
+  {
+   "move": [
+    6,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    1,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 128
+  },
+  {
+   "move": [
+    13,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1349
+  },
+  {
+   "move": [
+    15,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1350
+  },
+  {
+   "move": [
+    17,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1350
+  },
+  {
+   "move": [
+    9,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    7,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    19,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    3,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    11,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    1,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    5,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    21,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    22,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1333
+  },
+  {
+   "move": [
+    23,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    0,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 686
+  },
+  {
+   "move": [
+    12,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    16,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    9,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    3,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1327
+  },
+  {
+   "move": [
+    15,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    19,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1327
+  },
+  {
+   "move": [
+    14,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1325
+  },
+  {
+   "move": [
+    17,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    21,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    1,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    2,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    18,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1346
+  },
+  {
+   "move": [
+    20,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 128
+  },
+  {
+   "move": [
+    15,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    5,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    13,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    11,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    7,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    19,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    17,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1327
+  },
+  {
+   "move": [
+    7,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    22,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    21,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    22,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    3,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    1,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    10,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1349
+  },
+  {
+   "move": [
+    10,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1353
+  },
+  {
+   "move": [
+    11,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    13,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1348
+  },
+  {
+   "move": [
+    12,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1350
+  },
+  {
+   "move": [
+    13,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1348
+  },
+  {
+   "move": [
+    14,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1357
+  },
+  {
+   "move": [
+    15,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1359
+  },
+  {
+   "move": [
+    15,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1357
+  },
+  {
+   "move": [
+    13,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1352
+  },
+  {
+   "move": [
+    10,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1357
+  },
+  {
+   "move": [
+    10,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1351
+  },
+  {
+   "move": [
+    19,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1353
+  },
+  {
+   "move": [
+    18,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1358
+  },
+  {
+   "move": [
+    12,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1358
+  },
+  {
+   "move": [
+    14,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1359
+  },
+  {
+   "move": [
+    13,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1356
+  },
+  {
+   "move": [
+    11,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1359
+  },
+  {
+   "move": [
+    20,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1366
+  },
+  {
+   "move": [
+    10,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1362
+  },
+  {
+   "move": [
+    9,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1366
+  },
+  {
+   "move": [
+    8,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1365
+  },
+  {
+   "move": [
+    19,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1358
+  },
+  {
+   "move": [
+    14,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1365
+  },
+  {
+   "move": [
+    21,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1366
+  },
+  {
+   "move": [
+    22,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1366
+  },
+  {
+   "move": [
+    13,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1360
+  },
+  {
+   "move": [
+    15,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1366
+  },
+  {
+   "move": [
+    12,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1369
+  },
+  {
+   "move": [
+    9,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1363
+  },
+  {
+   "move": [
+    11,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1369
+  },
+  {
+   "move": [
+    9,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1371
+  },
+  {
+   "move": [
+    12,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1365
+  },
+  {
+   "move": [
+    13,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1372
+  },
+  {
+   "move": [
+    11,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1369
+  },
+  {
+   "move": [
+    9,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1373
+  },
+  {
+   "move": [
+    11,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1371
+  },
+  {
+   "move": [
+    19,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1382
+  },
+  {
+   "move": [
+    20,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1377
+  },
+  {
+   "move": [
+    14,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1370
+  },
+  {
+   "move": [
+    12,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1376
+  },
+  {
+   "move": [
+    18,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1375
+  },
+  {
+   "move": [
+    13,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1374
+  },
+  {
+   "move": [
+    12,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1378
+  },
+  {
+   "move": [
+    13,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1383
+  },
+  {
+   "move": [
+    14,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1388
+  },
+  {
+   "move": [
+    21,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1382
+  },
+  {
+   "move": [
+    12,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1389
+  },
+  {
+   "move": [
+    12,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1396
+  },
+  {
+   "move": [
+    14,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1387
+  },
+  {
+   "move": [
+    13,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1393
+  },
+  {
+   "move": [
+    12,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1395
+  },
+  {
+   "move": [
+    11,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1400
+  },
+  {
+   "move": [
+    14,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1395
+  },
+  {
+   "move": [
+    18,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1395
+  },
+  {
+   "move": [
+    16,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1397
+  },
+  {
+   "move": [
+    13,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1396
+  },
+  {
+   "move": [
+    17,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1403
+  },
+  {
+   "move": [
+    11,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1402
+  },
+  {
+   "move": [
+    11,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1398
+  },
+  {
+   "move": [
+    12,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1407
+  },
+  {
+   "move": [
+    13,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1410
+  },
+  {
+   "move": [
+    11,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1407
+  },
+  {
+   "move": [
+    14,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1413
+  },
+  {
+   "move": [
+    11,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1416
+  },
+  {
+   "move": [
+    8,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1417
+  },
+  {
+   "move": [
+    9,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1418
+  },
+  {
+   "move": [
+    22,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1421
+  },
+  {
+   "move": [
+    20,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1418
+  },
+  {
+   "move": [
+    22,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1418
+  },
+  {
+   "move": [
+    21,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1420
+  },
+  {
+   "move": [
+    12,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1420
+  },
+  {
+   "move": [
+    21,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1418
+  },
+  {
+   "move": [
+    14,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1430
+  },
+  {
+   "move": [
+    13,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1427
+  },
+  {
+   "move": [
+    15,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1426
+  },
+  {
+   "move": [
+    11,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1432
+  },
+  {
+   "move": [
+    21,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1432
+  },
+  {
+   "move": [
+    10,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1434
+  },
+  {
+   "move": [
+    10,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1438
+  },
+  {
+   "move": [
+    10,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1438
+  },
+  {
+   "move": [
+    12,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1438
+  },
+  {
+   "move": [
+    22,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1437
+  },
+  {
+   "move": [
+    15,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1441
+  },
+  {
+   "move": [
+    10,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1444
+  },
+  {
+   "move": [
+    20,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1440
+  },
+  {
+   "move": [
+    22,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1451
+  },
+  {
+   "move": [
+    19,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1448
+  },
+  {
+   "move": [
+    20,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1447
+  },
+  {
+   "move": [
+    22,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1450
+  },
+  {
+   "move": [
+    20,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1451
+  },
+  {
+   "move": [
+    21,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1447
+  },
+  {
+   "move": [
+    19,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1453
+  },
+  {
+   "move": [
+    17,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1455
+  },
+  {
+   "move": [
+    22,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1456
+  },
+  {
+   "move": [
+    19,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1452
+  },
+  {
+   "move": [
+    21,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1455
+  },
+  {
+   "move": [
+    22,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1456
+  },
+  {
+   "move": [
+    21,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1455
+  },
+  {
+   "move": [
+    21,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1454
+  },
+  {
+   "move": [
+    22,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1455
+  },
+  {
+   "move": [
+    20,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1452
+  },
+  {
+   "move": [
+    22,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1454
+  },
+  {
+   "move": [
+    21,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1457
+  },
+  {
+   "move": [
+    16,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1454
+  },
+  {
+   "move": [
+    18,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1460
+  },
+  {
+   "move": [
+    17,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1461
+  },
+  {
+   "move": [
+    18,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1456
+  },
+  {
+   "move": [
+    19,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1465
+  },
+  {
+   "move": [
+    11,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1464
+  },
+  {
+   "move": [
+    10,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1464
+  },
+  {
+   "move": [
+    9,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1466
+  },
+  {
+   "move": [
+    10,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1465
+  },
+  {
+   "move": [
+    13,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1463
+  },
+  {
+   "move": [
+    15,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1464
+  },
+  {
+   "move": [
+    9,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1463
+  },
+  {
+   "move": [
+    19,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1461
+  },
+  {
+   "move": [
+    15,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1471
+  },
+  {
+   "move": [
+    18,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1474
+  },
+  {
+   "move": [
+    19,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1499
+  },
+  {
+   "move": [
+    11,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1516
+  },
+  {
+   "move": [
+    12,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1517
+  },
+  {
+   "move": [
+    16,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1515
+  },
+  {
+   "move": [
+    9,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1530
+  },
+  {
+   "move": [
+    10,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1530
+  },
+  {
+   "move": [
+    17,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1530
+  },
+  {
+   "move": [
+    18,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1531
+  },
+  {
+   "move": [
+    18,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1530
+  },
+  {
+   "move": [
+    20,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1529
+  },
+  {
+   "move": [
+    14,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1531
+  },
+  {
+   "move": [
+    14,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1518
+  },
+  {
+   "move": [
+    14,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1516
+  },
+  {
+   "move": [
+    1,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1523
+  },
+  {
+   "move": [
+    15,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1529
+  },
+  {
+   "move": [
+    20,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1525
+  },
+  {
+   "move": [
+    9,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1525
+  },
+  {
+   "move": [
+    8,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1530
+  },
+  {
+   "move": [
+    9,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1532
+  },
+  {
+   "move": [
+    7,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1540
+  },
+  {
+   "move": [
+    8,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1534
+  },
+  {
+   "move": [
+    17,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1527
+  },
+  {
+   "move": [
+    13,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1530
+  },
+  {
+   "move": [
+    20,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1530
+  },
+  {
+   "move": [
+    16,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1530
+  },
+  {
+   "move": [
+    7,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1532
+  },
+  {
+   "move": [
+    5,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1532
+  },
+  {
+   "move": [
+    8,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1531
+  },
+  {
+   "move": [
+    9,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1534
+  },
+  {
+   "move": [
+    10,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1537
+  },
+  {
+   "move": [
+    12,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1529
+  },
+  {
+   "move": [
+    13,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1537
+  },
+  {
+   "move": [
+    11,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1534
+  },
+  {
+   "move": [
+    14,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1534
+  },
+  {
+   "move": [
+    12,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1536
+  },
+  {
+   "move": [
+    9,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1538
+  },
+  {
+   "move": [
+    8,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1538
+  },
+  {
+   "move": [
+    1,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1542
+  },
+  {
+   "move": [
+    10,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1540
+  },
+  {
+   "move": [
+    7,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1537
+  },
+  {
+   "move": [
+    21,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1542
+  },
+  {
+   "move": [
+    22,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1542
+  },
+  {
+   "move": [
+    20,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1538
+  },
+  {
+   "move": [
+    22,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1544
+  },
+  {
+   "move": [
+    7,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1539
+  },
+  {
+   "move": [
+    15,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1538
+  },
+  {
+   "move": [
+    16,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1545
+  },
+  {
+   "move": [
+    17,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1545
+  },
+  {
+   "move": [
+    1,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1540
+  },
+  {
+   "move": [
+    8,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1543
+  },
+  {
+   "move": [
+    7,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1542
+  },
+  {
+   "move": [
+    15,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1541
+  },
+  {
+   "move": [
+    1,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1547
+  },
+  {
+   "move": [
+    18,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1548
+  },
+  {
+   "move": [
+    16,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1549
+  },
+  {
+   "move": [
+    16,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1575
+  },
+  {
+   "move": [
+    8,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1572
+  },
+  {
+   "move": [
+    2,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1573
+  },
+  {
+   "move": [
+    1,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1574
+  },
+  {
+   "move": [
+    1,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1570
+  },
+  {
+   "move": [
+    1,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1575
+  },
+  {
+   "move": [
+    1,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1577
+  },
+  {
+   "move": [
+    3,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1575
+  },
+  {
+   "move": [
+    6,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1579
+  },
+  {
+   "move": [
+    1,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1579
+  },
+  {
+   "move": [
+    3,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1581
+  },
+  {
+   "move": [
+    5,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1583
+  },
+  {
+   "move": [
+    19,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1587
+  },
+  {
+   "move": [
+    1,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1585
+  },
+  {
+   "move": [
+    1,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1584
+  },
+  {
+   "move": [
+    16,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1592
+  },
+  {
+   "move": [
+    16,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1587
+  },
+  {
+   "move": [
+    15,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1599
+  },
+  {
+   "move": [
+    17,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1599
+  },
+  {
+   "move": [
+    4,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1594
+  },
+  {
+   "move": [
+    5,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1598
+  },
+  {
+   "move": [
+    6,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1603
+  },
+  {
+   "move": [
+    17,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1599
+  },
+  {
+   "move": [
+    14,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1607
+  },
+  {
+   "move": [
+    4,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1607
+  },
+  {
+   "move": [
+    15,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1603
+  },
+  {
+   "move": [
+    5,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1604
+  },
+  {
+   "move": [
+    4,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1614
+  },
+  {
+   "move": [
+    14,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1614
+  },
+  {
+   "move": [
+    2,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1614
+  },
+  {
+   "move": [
+    6,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1611
+  },
+  {
+   "move": [
+    2,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1613
+  },
+  {
+   "move": [
+    1,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1614
+  },
+  {
+   "move": [
+    16,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1616
+  },
+  {
+   "move": [
+    3,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1619
+  },
+  {
+   "move": [
+    8,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1618
+  },
+  {
+   "move": [
+    10,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1622
+  },
+  {
+   "move": [
+    2,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1621
+  },
+  {
+   "move": [
+    16,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1623
+  },
+  {
+   "move": [
+    4,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1621
+  },
+  {
+   "move": [
+    6,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1622
+  },
+  {
+   "move": [
+    3,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1621
+  },
+  {
+   "move": [
+    18,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1622
+  },
+  {
+   "move": [
+    7,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1623
+  },
+  {
+   "move": [
+    17,
+    2
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1625
+  },
+  {
+   "move": [
+    4,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1627
+  },
+  {
+   "move": [
+    6,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1624
+  },
+  {
+   "move": [
+    19,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1630
+  },
+  {
+   "move": [
+    3,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1631
+  },
+  {
+   "move": [
+    3,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1634
+  },
+  {
+   "move": [
+    10,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1632
+  },
+  {
+   "move": [
+    4,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1633
+  },
+  {
+   "move": [
+    3,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1632
+  },
+  {
+   "move": [
+    2,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1634
+  },
+  {
+   "move": [
+    4,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1634
+  },
+  {
+   "move": [
+    15,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1636
+  },
+  {
+   "move": [
+    5,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1641
+  },
+  {
+   "move": [
+    5,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1639
+  },
+  {
+   "move": [
+    5,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1636
+  },
+  {
+   "move": [
+    3,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1637
+  },
+  {
+   "move": [
+    2,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1635
+  },
+  {
+   "move": [
+    2,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1635
+  },
+  {
+   "move": [
+    9,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1636
+  },
+  {
+   "move": [
+    4,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1635
+  },
+  {
+   "move": [
+    15,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1638
+  },
+  {
+   "move": [
+    15,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1639
+  },
+  {
+   "move": [
+    16,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1637
+  },
+  {
+   "move": [
+    3,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1636
+  },
+  {
+   "move": [
+    4,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1637
+  },
+  {
+   "move": [
+    4,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1641
+  },
+  {
+   "move": [
+    4,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1640
+  },
+  {
+   "move": [
+    17,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1645
+  },
+  {
+   "move": [
+    7,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1640
+  },
+  {
+   "move": [
+    2,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1642
+  },
+  {
+   "move": [
+    10,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1648
+  },
+  {
+   "move": [
+    6,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1643
+  },
+  {
+   "move": [
+    16,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1647
+  },
+  {
+   "move": [
+    4,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1649
+  },
+  {
+   "move": [
+    18,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1648
+  },
+  {
+   "move": [
+    22,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1652
+  },
+  {
+   "move": [
+    7,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1644
+  },
+  {
+   "move": [
+    5,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1653
+  },
+  {
+   "move": [
+    5,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1653
+  },
+  {
+   "move": [
+    4,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1651
+  },
+  {
+   "move": [
+    3,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1657
+  },
+  {
+   "move": [
+    3,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1655
+  },
+  {
+   "move": [
+    19,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1654
+  },
+  {
+   "move": [
+    4,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1661
+  },
+  {
+   "move": [
+    16,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1661
+  },
+  {
+   "move": [
+    15,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1662
+  },
+  {
+   "move": [
+    17,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1664
+  },
+  {
+   "move": [
+    18,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1670
+  },
+  {
+   "move": [
+    1,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1690
+  },
+  {
+   "move": [
+    19,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1715
+  },
+  {
+   "move": [
+    1,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1176
+  },
+  {
+   "move": [
+    16,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 320
+  },
+  {
+   "move": [
+    5,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 155
+  },
+  {
+   "move": [
+    15,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    7,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    19,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    5,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    13,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    17,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1346
+  },
+  {
+   "move": [
+    1,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    21,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    3,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    23,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    9,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    0,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 691
+  },
+  {
+   "move": [
+    20,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1326
+  },
+  {
+   "move": [
+    3,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1325
+  },
+  {
+   "move": [
+    15,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    20,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    2,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    3,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    9,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    1,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    2,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    9,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1220
+  },
+  {
+   "move": [
+    21,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 127
+  },
+  {
+   "move": [
+    8,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    16,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    5,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    14,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    3,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    20,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    10,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    6,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    18,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    1,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    22,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    23,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    0,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 687
+  },
+  {
+   "move": [
+    17,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    3,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1324
+  },
+  {
+   "move": [
+    7,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    13,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    2,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    10,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    14,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    6,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    1,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1349
+  },
+  {
+   "move": [
+    22,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1234
+  },
+  {
+   "move": [
+    21,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 449
+  },
+  {
+   "move": [
+    20,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 128
+  },
+  {
+   "move": [
+    13,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    18,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    12,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    20,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    22,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    5,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    14,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    7,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    3,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    11,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    1,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    23,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    0,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 675
+  },
+  {
+   "move": [
+    8,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1325
+  },
+  {
+   "move": [
+    6,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    8,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    4,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1333
+  },
+  {
+   "move": [
+    21,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    8,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    9,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    1,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1325
+  },
+  {
+   "move": [
+    19,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1348
+  },
+  {
+   "move": [
+    3,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    17,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1346
+  },
+  {
+   "move": [
+    10,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 125
+  },
+  {
+   "move": [
+    8,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    16,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    14,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    20,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    6,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    4,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    10,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    2,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    18,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    21,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    22,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    0,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    23,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 592
+  },
+  {
+   "move": [
+    17,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1326
+  },
+  {
+   "move": [
+    11,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1323
+  },
+  {
+   "move": [
+    6,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    17,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    14,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    3,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    8,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1333
+  },
+  {
+   "move": [
+    20,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1333
+  },
+  {
+   "move": [
+    1,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    2,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    15,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    22,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1349
+  },
+  {
+   "move": [
+    8,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    6,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 127
+  },
+  {
+   "move": [
+    13,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    11,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    15,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    17,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    12,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    3,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    19,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    5,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    21,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    1,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    9,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    23,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    0,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 679
+  },
+  {
+   "move": [
+    4,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1322
+  },
+  {
+   "move": [
+    17,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    7,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    8,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1346
+  },
+  {
+   "move": [
+    10,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1353
+  },
+  {
+   "move": [
+    8,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    10,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    8,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    11,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    8,
+    21
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1333
+  },
+  {
+   "move": [
+    6,
+    22
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    6,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    9,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    9,
+    1
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    9,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    10,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    8,
+    23
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    7,
+    0
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 689
+  },
+  {
+   "move": [
+    6,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    4,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1346
+  },
+  {
+   "move": [
+    11,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    17,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    12,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    19,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    14,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    2,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    7,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    21,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    22,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    9,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    23,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1285
+  },
+  {
+   "move": [
+    0,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 689
+  },
+  {
+   "move": [
+    20,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    11,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1333
+  },
+  {
+   "move": [
+    13,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    17,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1323
+  },
+  {
+   "move": [
+    21,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    11,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    7,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    20,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1326
+  },
+  {
+   "move": [
+    22,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    9,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    15,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1283
+  },
+  {
+   "move": [
+    2,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 125
+  },
+  {
+   "move": [
+    14,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    6,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    11,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    8,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    18,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    12,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    2,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    4,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    20,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    0,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    16,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    22,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1282
+  },
+  {
+   "move": [
+    23,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 691
+  },
+  {
+   "move": [
+    18,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1324
+  },
+  {
+   "move": [
+    6,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1326
+  },
+  {
+   "move": [
+    19,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1323
+  },
+  {
+   "move": [
+    6,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1327
+  },
+  {
+   "move": [
+    11,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1323
+  },
+  {
+   "move": [
+    11,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    3,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    22,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1324
+  },
+  {
+   "move": [
+    21,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    3,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1352
+  },
+  {
+   "move": [
+    2,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    1,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    5,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1354
+  },
+  {
+   "move": [
+    4,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 128
+  },
+  {
+   "move": [
+    12,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    9,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    18,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1346
+  },
+  {
+   "move": [
+    7,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    16,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    5,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    3,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    22,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    20,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    1,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    11,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    0,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    23,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 693
+  },
+  {
+   "move": [
+    20,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    12,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1324
+  },
+  {
+   "move": [
+    7,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1324
+  },
+  {
+   "move": [
+    4,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    19,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    14,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    4,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    16,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    3,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1346
+  },
+  {
+   "move": [
+    21,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    22,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    1,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 126
+  },
+  {
+   "move": [
+    13,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    12,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    17,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    6,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    10,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    4,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    19,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    15,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    21,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    2,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    1,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    23,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    0,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 562
+  },
+  {
+   "move": [
+    13,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1322
+  },
+  {
+   "move": [
+    4,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1324
+  },
+  {
+   "move": [
+    3,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    15,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    6,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    10,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1327
+  },
+  {
+   "move": [
+    4,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1327
+  },
+  {
+   "move": [
+    1,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1325
+  },
+  {
+   "move": [
+    22,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1348
+  },
+  {
+   "move": [
+    21,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    10,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    10,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 127
+  },
+  {
+   "move": [
+    16,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1353
+  },
+  {
+   "move": [
+    14,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1352
+  },
+  {
+   "move": [
+    16,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    18,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    6,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    8,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    10,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    4,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    20,
+    19
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    22,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1333
+  },
+  {
+   "move": [
+    2,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    15,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1338
+  },
+  {
+   "move": [
+    11,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    9,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    0,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    23,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 690
+  },
+  {
+   "move": [
+    19,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    3,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1326
+  },
+  {
+   "move": [
+    9,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    4,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    17,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    2,
+    11
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1325
+  },
+  {
+   "move": [
+    17,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    22,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    21,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    15,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    9,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    1,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    2,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 125
+  },
+  {
+   "move": [
+    9,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1348
+  },
+  {
+   "move": [
+    12,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    4,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1334
+  },
+  {
+   "move": [
+    15,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    5,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    19,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    2,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    14,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    10,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    21,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    22,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    0,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    23,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 691
+  },
+  {
+   "move": [
+    6,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1322
+  },
+  {
+   "move": [
+    14,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    4,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1326
+  },
+  {
+   "move": [
+    15,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1330
+  },
+  {
+   "move": [
+    12,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1328
+  },
+  {
+   "move": [
+    16,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    22,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    1,
+    18
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1324
+  },
+  {
+   "move": [
+    2,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1350
+  },
+  {
+   "move": [
+    1,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1344
+  },
+  {
+   "move": [
+    21,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1348
+  },
+  {
+   "move": [
+    22,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1342
+  },
+  {
+   "move": [
+    2,
+    20
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1350
+  },
+  {
+   "move": [
+    19,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 126
+  },
+  {
+   "move": [
+    13,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    18,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    4,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    12,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1343
+  },
+  {
+   "move": [
+    17,
+    6
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    2,
+    3
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    10,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    6,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1341
+  },
+  {
+   "move": [
+    20,
+    5
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1335
+  },
+  {
+   "move": [
+    21,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1347
+  },
+  {
+   "move": [
+    22,
+    9
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    15,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1340
+  },
+  {
+   "move": [
+    23,
+    7
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1315
+  },
+  {
+   "move": [
+    0,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 682
+  },
+  {
+   "move": [
+    17,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    19,
+    13
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1331
+  },
+  {
+   "move": [
+    16,
+    15
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1336
+  },
+  {
+   "move": [
+    14,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1333
+  },
+  {
+   "move": [
+    5,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1329
+  },
+  {
+   "move": [
+    7,
+    16
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1327
+  },
+  {
+   "move": [
+    2,
+    17
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1332
+  },
+  {
+   "move": [
+    6,
+    4
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1337
+  },
+  {
+   "move": [
+    3,
+    10
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1339
+  },
+  {
+   "move": [
+    2,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1348
+  },
+  {
+   "move": [
+    1,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1346
+  },
+  {
+   "move": [
+    21,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1346
+  },
+  {
+   "move": [
+    13,
+    12
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1345
+  },
+  {
+   "move": [
+    4,
+    8
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 1348
+  },
+  {
+   "move": [
+    3,
+    14
+   ],
+   "visitsTotal": 200,
+   "nSimulations": 200,
+   "search": "protocol",
+   "modelId": "627c8d774df838a8",
+   "elapsed": 129
+  }
+ ]
+}

@@ -1,0 +1,56 @@
+t=    0.0s BUSY: load 9.36 >= 3.0; /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds at 95.0% CPU > 50.0%; /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds_stores at 56.3% CPU > 50.0%
+t=    5.0s BUSY: load 11.10 >= 3.0
+t=   10.1s BUSY: load 13.81 >= 3.0; /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds at 55.0% CPU > 50.0%
+t=   15.2s BUSY: load 13.27 >= 3.0; /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds_stores at 418.4% CPU > 50.0%; /System/Library/PrivateFrameworks/MediaAnalysis.framework/Versions/A/mediaanalysisd at 102.9% CPU > 50.0%
+t=   20.2s BUSY: load 12.20 >= 3.0
+t=   25.3s BUSY: load 11.39 >= 3.0
+t=   30.3s BUSY: load 10.64 >= 3.0
+t=   35.3s BUSY: load 9.86 >= 3.0
+t=   40.4s BUSY: load 9.15 >= 3.0
+t=   45.4s BUSY: load 8.50 >= 3.0
+t=   50.5s BUSY: load 8.06 >= 3.0
+t=   55.5s BUSY: load 7.49 >= 3.0
+t=   60.6s BUSY: load 6.97 >= 3.0
+t=   65.7s BUSY: load 6.42 >= 3.0
+t=   70.7s BUSY: load 6.14 >= 3.0
+t=   75.8s BUSY: load 6.14 >= 3.0
+t=   80.8s BUSY: load 5.81 >= 3.0
+t=   85.9s BUSY: load 5.42 >= 3.0
+t=   90.9s BUSY: load 5.07 >= 3.0
+t=   96.0s BUSY: load 4.66 >= 3.0
+t=  101.0s BUSY: load 4.37 >= 3.0
+t=  106.1s BUSY: load 4.10 >= 3.0
+t=  111.1s BUSY: load 10.02 >= 3.0
+t=  116.2s BUSY: load 9.29 >= 3.0
+t=  121.2s BUSY: load 8.71 >= 3.0
+t=  126.2s BUSY: load 8.01 >= 3.0
+t=  131.3s BUSY: load 7.69 >= 3.0
+t=  136.3s BUSY: load 7.31 >= 3.0
+t=  141.4s BUSY: load 6.73 >= 3.0
+t=  146.5s BUSY: load 6.27 >= 3.0
+t=  151.5s BUSY: load 5.85 >= 3.0
+t=  156.6s BUSY: load 5.46 >= 3.0
+t=  161.6s BUSY: load 5.10 >= 3.0
+t=  166.7s BUSY: load 4.85 >= 3.0
+t=  171.7s BUSY: load 4.54 >= 3.0
+t=  176.8s BUSY: load 4.26 >= 3.0
+t=  181.8s BUSY: load 4.16 >= 3.0
+t=  186.9s BUSY: load 3.99 >= 3.0
+t=  191.9s BUSY: load 3.67 >= 3.0
+t=  197.0s BUSY: load 3.53 >= 3.0
+t=  202.0s BUSY: load 3.33 >= 3.0
+t=  207.1s BUSY: load 3.14 >= 3.0
+t=  212.1s idle for 0.0s
+t=  217.2s idle for 5.1s
+t=  222.2s idle for 10.1s
+t=  227.3s idle for 15.2s
+t=  232.3s idle for 20.2s
+t=  237.4s idle for 25.3s
+t=  242.4s idle for 30.3s
+t=  247.5s idle for 35.4s
+t=  252.5s idle for 40.4s
+t=  257.6s idle for 45.5s
+t=  262.6s idle for 50.5s
+t=  267.7s idle for 55.6s
+t=  272.7s idle for 60.6s
+IDLE: held 60s (load < 3.0, no process > 50.0% CPU)

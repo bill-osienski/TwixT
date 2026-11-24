@@ -1,0 +1,94 @@
+▶ manifest path resolution
+  ✔ defaults to an application-relative path, never cwd (0.258708ms)
+  ✔ honours MODEL_MANIFEST as an override (0.047334ms)
+  ✔ resolves a relative MODEL_MANIFEST against cwd, not the app (0.042625ms)
+  ✔ ignores MODEL_PATH entirely — it is no longer a serving override (0.029375ms)
+✔ manifest path resolution (0.748125ms)
+▶ model id addresses the whole pair
+  ✔ is derived from both hashes, not the graph alone (0.271583ms)
+  ✔ the committed baseline id follows from its own hashes (6.413708ms)
+✔ model id addresses the whole pair (6.842125ms)
+▶ committed baseline artifact
+  ✔ the default manifest exists, validates, and its pair hashes match (7.179917ms)
+  ✔ every external-data reference in the real graph names the declared sidecar (4.146792ms)
+  ✔ the BASELINE manifest still records provenance as unknown, not reconstructed (0.251667ms)
+  ✔ the SERVED default now records complete provenance (3.287709ms)
+  ✔ attaches no parity or strength claim (3.376125ms)
+  ✔ the live session matches the declared contract exactly (19.788166ms)
+✔ committed baseline artifact (38.320541ms)
+▶ fail-loud validation
+  ✔ accepts a well-formed fixture (control) (1.613166ms)
+  ✔ MANIFEST_MISSING when the manifest does not exist (0.17125ms)
+  ✔ MANIFEST_UNREADABLE when the manifest is not JSON (0.310666ms)
+  ✔ MANIFEST_INVALID when a required field is absent (0.659ms)
+  ✔ MANIFEST_INVALID on an unsupported manifest_version (0.650375ms)
+  ✔ MANIFEST_INVALID when a filename is a path rather than a basename (0.688667ms)
+  ✔ MODEL_ID_MISMATCH when the id does not follow from the declared hashes (0.573708ms)
+  ✔ GRAPH_MISSING when the graph file is absent (0.797125ms)
+  ✔ GRAPH_SIZE_MISMATCH when the declared size is wrong (0.584791ms)
+  ✔ GRAPH_HASH_MISMATCH when the graph bytes change (0.779333ms)
+  ✔ DATA_MISSING when the sidecar is absent (1.36ms)
+  ✔ DATA_SIZE_MISMATCH when the declared sidecar size is wrong (0.897791ms)
+  ✔ DATA_HASH_MISMATCH when the weights change (1.151ms)
+✔ fail-loud validation (12.152125ms)
+▶ external-data binding is structural, not textual
+  ✔ parses locations out of a synthetic graph (0.181ms)
+  ✔ rejects a decoy filename carried in the doc string (0.719292ms)
+  ✔ rejects a graph loading from more than one sidecar (0.670209ms)
+  ✔ rejects a graph that references no external data at all (0.693208ms)
+  ✔ rejects external-data entries hidden outside graph.initializer (0.813166ms)
+  ✔ GRAPH_UNPARSEABLE on bytes that are not a protobuf message (0.678583ms)
+✔ external-data binding is structural, not textual (4.719167ms)
+▶ tensor contract is enforced, not merely recorded
+  ✔ accepts the matching contract in any tensor order (0.113917ms)
+  ✔ rejects a missing input (0.162667ms)
+  ✔ rejects a wrong tensor type (0.046667ms)
+  ✔ rejects a 24-channel board against the real 30-channel session (0.036667ms)
+  ✔ rejects a 512-move policy against the real 576-move session (0.035875ms)
+  ✔ rejects board_shape that contradicts its own declared board tensor (0.025792ms)
+  ✔ rejects max_moves that contradicts its own declared move tensors (0.025917ms)
+  ✔ rejects an artifact whose move count disagrees with AlphaZeroInference (0.032125ms)
+✔ tensor contract is enforced, not merely recorded (0.547166ms)
+▶ application compatibility, not just self-consistency
+  ✔ the derived application contract matches the pinned baseline (4.596542ms)
+  ✔ rejects a 24-channel model whose manifest agrees with it (0.15775ms)
+  ✔ rejects an output named `score` when the server reads `value` (0.068541ms)
+  ✔ rejects a renamed input — caught earlier, as an internal inconsistency (0.073833ms)
+  ✔ rejects int32 move indices when the server supplies int64 (0.045458ms)
+  ✔ rejects a board size other than the served 24 (0.060625ms)
+  ✔ rejects a self-consistent 512-move artifact against a 576-move server (0.045666ms)
+  ✔ rejects an extra output the server does not handle (0.056958ms)
+  ✔ rejects a non-scalar value head (0.041875ms)
+  ✔ requires the application move count to be supplied at all (0.04575ms)
+✔ application compatibility, not just self-consistency (5.297167ms)
+▶ inference server entry point
+  ✔ starts with no environment override at all (npm run server) (89.284708ms)
+  ✔ resolves the same artifact when started from a foreign cwd (82.797792ms)
+  ✔ exits non-zero on a missing manifest (59.928834ms)
+  ✔ exits non-zero on tampered weights (65.455959ms)
+  ✔ leaves the pinned artifact untouched throughout (6.214083ms)
+✔ inference server entry point (310.297333ms)
+▶ launcher entry point
+  ✔ starts the AI server when the pinned artifact validates (105.916625ms)
+  ✔ refuses to start the AI server on a broken manifest, and exports nothing (31.039792ms)
+✔ launcher entry point (137.05225ms)
+▶ no startup export path
+  ✔ the loader cannot spawn an exporter (0.34625ms)
+  ✔ startServer.js no longer auto-exports the latest checkpoint (0.199334ms)
+  ✔ server/index.js takes its model from the manifest, not a cwd-relative default (0.19425ms)
+✔ no startup export path (0.828333ms)
+✔ the runtime under test is the pinned onnxruntime-node 1.23.2 (0.526041ms)
+✔ the generator matches its Python twin on fixed values (0.294375ms)
+✔ control: two dense Convs in one session are each correct (285.563625ms)
+✔ within one session: three Convs with an all-zero filter 0 are each correct (385.022375ms)
+✔ across sessions in one process: each zero-filter Conv stays its own (253.411209ms)
+✔ the check can fail: a conflated output is far outside the tolerance (290.430291ms)
+✔ a probe that sets process.exitCode exits cleanly after inference, 3 of 3 (113.335375ms)
+ℹ tests 66
+ℹ suites 10
+ℹ pass 66
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1261.141125

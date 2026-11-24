@@ -1,0 +1,609 @@
+{
+ "schema": "hmx-integration-check-record/1",
+ "written_by": "script",
+ "status": "COMPLETED",
+ "verdict": "PASS",
+ "summary": {
+  "G0": "PASS",
+  "S1": "PASS",
+  "S2": "PASS",
+  "A0": "PASS",
+  "A1": "PASS",
+  "A2": "PASS",
+  "S4": "PASS",
+  "R1": "PASS",
+  "R2": "PASS"
+ },
+ "started": "2026-11-24T00:01:36.221Z",
+ "ended": "2026-11-24T02:08:42.397Z",
+ "total_seconds": 7626.135527291,
+ "head": "f46e90a72111c69f80610ac7a60382f64d418ef3",
+ "staged": {
+  "root": "/Users/bill/projects/TwixT_Game-hmx-check",
+  "hard_model_id": "627c8d774df838a8",
+  "model_manifest_js_sha256": "054f9434071d1502482550fb91ed34b57462ba5a29a02ab9cbcc559dab06f3c2",
+  "new_manifest_sha256": "abf3931d920f788de146cf8dafbd213581f682a754b65df1520d42eae954071d"
+ },
+ "reference": {
+  "root": "/Users/bill/projects/TwixT_Game-hmx-check-ref",
+  "commit": "abaf20beddf70e7857b41667c34c4c5a6809f47d",
+  "hard_model_id": "78c16a31c3dba37f"
+ },
+ "revert": {
+  "root": "/Users/bill/projects/TwixT_Game-hmx-check-revert",
+  "head": "3dac7d1d4d75141e6874c04b7513199cb3005b21"
+ },
+ "samples": {
+  "games": 41,
+  "challenger_rows": 845,
+  "current_rows": 844,
+  "positions": 142,
+  "match_record_sha256": "6bfa8bb6082da5e30b6816728d0a6ba1e6b04ea801fa9e26c85fee9dc6017371"
+ },
+ "checks": {
+  "G0": {
+   "verdict": "PASS",
+   "suites": [
+    {
+     "label": "g0-server",
+     "code": 0,
+     "verdict": "PASS",
+     "counts": {
+      "tests": 66,
+      "pass": 66,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "failing": []
+     },
+     "note": null
+    },
+    {
+     "label": "g0-match",
+     "code": 0,
+     "verdict": "PASS",
+     "counts": {
+      "tests": 66,
+      "pass": 66,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "failing": []
+     },
+     "note": null
+    }
+   ]
+  },
+  "S1": {
+   "verdict": "PASS",
+   "checks": [
+    {
+     "id": "L1 banner",
+     "ok": true,
+     "detail": [
+      "Model id:   c34b7ff3297c785a",
+      "Manifest:   /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/manifest.json",
+      "Hard mode:  protocol",
+      "Hard model id:   627c8d774df838a8",
+      "Hard manifest:   /Users/bill/projects/TwixT_Game-hmx-check/models/627c8d774df838a8/manifest.json"
+     ]
+    },
+    {
+     "id": "L2 model-info",
+     "ok": true,
+     "detail": {
+      "hard_mode": "protocol",
+      "hard_model_id": "627c8d774df838a8",
+      "model_id": "c34b7ff3297c785a"
+     }
+    }
+   ],
+   "banner": [
+    "Model id:   c34b7ff3297c785a",
+    "Manifest:   /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/manifest.json",
+    "Hard mode:  protocol",
+    "Hard model id:   627c8d774df838a8",
+    "Hard manifest:   /Users/bill/projects/TwixT_Game-hmx-check/models/627c8d774df838a8/manifest.json"
+   ],
+   "modelInfo": {
+    "checkpoint_path": "/Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx",
+    "model_id": "c34b7ff3297c785a",
+    "hard_mode": "protocol",
+    "hard_model_id": "627c8d774df838a8",
+    "model_iter": null,
+    "network": {
+     "hidden": 128,
+     "blocks": 6
+    },
+    "mcts_defaults": {
+     "eval_batch_size": 14,
+     "stall_flush_sims": 48,
+     "virtual_visits": 8
+    },
+    "engine": {
+     "server_git_sha": "f46e90a7",
+     "server_build_utc": "2026-11-24T00:01:52.359Z",
+     "rules_version": "twixt_v1",
+     "evaluator_device": "cpu_onnx",
+     "dtype": "float32"
+    }
+   }
+  },
+  "S2": {
+   "verdict": "PASS",
+   "checks": [
+    {
+     "id": "L3 WS hard empty board (ply 0, red)",
+     "ok": true,
+     "detail": {
+      "move": {
+       "row": 11,
+       "col": 7
+      },
+      "valueKind": "root_mean",
+      "visitsTotal": 200,
+      "progressMessages": 16,
+      "elapsed": 1377,
+      "type": "bestmove"
+     }
+    },
+    {
+     "id": "L3 WS hard opening_00 (ply 2, red)",
+     "ok": true,
+     "detail": {
+      "move": {
+       "row": 13,
+       "col": 14
+      },
+      "valueKind": "root_mean",
+      "visitsTotal": 200,
+      "progressMessages": 16,
+      "elapsed": 1351,
+      "type": "bestmove"
+     }
+    },
+    {
+     "id": "L3 WS hard opening_01 (ply 3, black)",
+     "ok": true,
+     "detail": {
+      "move": {
+       "row": 7,
+       "col": 14
+      },
+      "valueKind": "root_mean",
+      "visitsTotal": 200,
+      "progressMessages": 16,
+      "elapsed": 1352,
+      "type": "bestmove"
+     }
+    },
+    {
+     "id": "L3 WS hard early_mid_00 (ply 20, red)",
+     "ok": true,
+     "detail": {
+      "move": {
+       "row": 15,
+       "col": 17
+      },
+      "valueKind": "played_move_mean",
+      "visitsTotal": 200,
+      "progressMessages": 16,
+      "elapsed": 1350,
+      "type": "bestmove"
+     }
+    },
+    {
+     "id": "L3 WS hard early_mid_01 (ply 21, black)",
+     "ok": true,
+     "detail": {
+      "move": {
+       "row": 7,
+       "col": 14
+      },
+      "valueKind": "played_move_mean",
+      "visitsTotal": 200,
+      "progressMessages": 16,
+      "elapsed": 1348,
+      "type": "bestmove"
+     }
+    },
+    {
+     "id": "L3 WS hard late_00 (ply 100, red)",
+     "ok": true,
+     "detail": {
+      "move": {
+       "row": 4,
+       "col": 16
+      },
+      "valueKind": "played_move_mean",
+      "visitsTotal": 200,
+      "progressMessages": 16,
+      "elapsed": 1369,
+      "type": "bestmove"
+     }
+    },
+    {
+     "id": "L3 WS hard late_01 (ply 101, black)",
+     "ok": true,
+     "detail": {
+      "move": {
+       "row": 14,
+       "col": 11
+      },
+      "valueKind": "played_move_mean",
+      "visitsTotal": 200,
+      "progressMessages": 16,
+      "elapsed": 1370,
+      "type": "bestmove"
+     }
+    },
+    {
+     "id": "L4 REST hard, cache untouched",
+     "ok": true,
+     "detail": {
+      "status": 200,
+      "cached": false,
+      "statsBefore": {
+       "size": 0,
+       "maxSize": 10000,
+       "hits": 0,
+       "misses": 0,
+       "hitRate": "0.000"
+      },
+      "statsAfter": {
+       "size": 0,
+       "maxSize": 10000,
+       "hits": 0,
+       "misses": 0,
+       "hitRate": "0.000"
+      }
+     }
+    },
+    {
+     "id": "L4 control: REST medium is cached",
+     "ok": true,
+     "detail": {
+      "first": false,
+      "second": true
+     }
+    },
+    {
+     "id": "L5 overrides refused (REST 400, WS error, one message); deterministicMode:false accepted",
+     "ok": true,
+     "detail": {
+      "rest": [
+       400,
+       400,
+       200
+      ],
+      "ws": [
+       "error",
+       "error"
+      ]
+     }
+    },
+    {
+     "id": "L6 won position and 12x12 board refused on both transports",
+     "ok": true,
+     "detail": {
+      "rest": [
+       400,
+       "TERMINAL_ROOT",
+       400,
+       "NOT_24"
+      ]
+     }
+    },
+    {
+     "id": "L7 cancel answers nothing; a newer move aborts the older; the server keeps serving",
+     "ok": true,
+     "detail": {
+      "cancelledAnswers": 0,
+      "supersededAnswers": 0,
+      "latest": "bestmove"
+     }
+    },
+    {
+     "id": "L8 easy WS response keeps today's key set",
+     "ok": true,
+     "detail": {
+      "keys": [
+       "elapsed",
+       "evalToMove",
+       "id",
+       "move",
+       "nSimulations",
+       "rootValue",
+       "toMove",
+       "type",
+       "valueRed"
+      ]
+     }
+    },
+    {
+     "id": "L8 medium WS response keeps today's key set",
+     "ok": true,
+     "detail": {
+      "keys": [
+       "elapsed",
+       "evalToMove",
+       "id",
+       "move",
+       "nSimulations",
+       "rootValue",
+       "toMove",
+       "type",
+       "valueRed"
+      ]
+     }
+    },
+    {
+     "id": "L9 timing recorded (informational)",
+     "ok": true,
+     "detail": {
+      "hardMoves": [
+       {
+        "ply": 0,
+        "elapsedMs": 1377
+       },
+       {
+        "ply": 2,
+        "elapsedMs": 1351
+       },
+       {
+        "ply": 3,
+        "elapsedMs": 1352
+       },
+       {
+        "ply": 20,
+        "elapsedMs": 1350
+       },
+       {
+        "ply": 21,
+        "elapsedMs": 1348
+       },
+       {
+        "ply": 100,
+        "elapsedMs": 1369
+       },
+       {
+        "ply": 101,
+        "elapsedMs": 1370
+       }
+      ]
+     }
+    }
+   ]
+  },
+  "A0": {
+   "verdict": "PASS",
+   "rows": 845,
+   "equal": 845,
+   "failures": [],
+   "failureCount": 0
+  },
+  "A1": {
+   "verdict": "PASS",
+   "rows": 845,
+   "equal": 845,
+   "failures": [],
+   "failureCount": 0,
+   "seedProblems": [],
+   "banner": [
+    "HMX_SEED_PRELOAD 1690 values from /Users/bill/projects/TwixT_Game-hmx-check/docs/superpowers/evidence/hmx-integration-check/servers/a1_ws.seeds.json",
+    "Model id:   c34b7ff3297c785a",
+    "Manifest:   /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/manifest.json",
+    "Hard mode:  protocol",
+    "Hard model id:   627c8d774df838a8",
+    "Hard manifest:   /Users/bill/projects/TwixT_Game-hmx-check/models/627c8d774df838a8/manifest.json"
+   ]
+  },
+  "A2": {
+   "verdict": "PASS",
+   "rows": 845,
+   "equal": 845,
+   "failures": [],
+   "failureCount": 0,
+   "seedProblems": [],
+   "banner": [
+    "HMX_SEED_PRELOAD 1690 values from /Users/bill/projects/TwixT_Game-hmx-check/docs/superpowers/evidence/hmx-integration-check/servers/a2_rest.seeds.json",
+    "Model id:   c34b7ff3297c785a",
+    "Manifest:   /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/manifest.json",
+    "Hard mode:  protocol",
+    "Hard model id:   627c8d774df838a8",
+    "Hard manifest:   /Users/bill/projects/TwixT_Game-hmx-check/models/627c8d774df838a8/manifest.json"
+   ]
+  },
+  "S4": {
+   "verdict": "PASS",
+   "failures": [],
+   "failureCount": 0,
+   "hardOk": 142,
+   "plainOk": 284,
+   "referenceHard": "78c16a31c3dba37f",
+   "seedProblems": []
+  },
+  "R1": {
+   "verdict": "PASS",
+   "a": {
+    "verdict": "PASS",
+    "failures": [],
+    "failureCount": 0,
+    "hardOk": 142,
+    "plainOk": 284,
+    "bannerOk": true,
+    "seedProblems": []
+   },
+   "b": {
+    "verdict": "PASS",
+    "rows": 844,
+    "equal": 844,
+    "failureCount": 0
+   }
+  },
+  "R2": {
+   "verdict": "PASS",
+   "a": {
+    "verdict": "PASS",
+    "failures": [],
+    "failureCount": 0,
+    "hardOk": 142,
+    "plainOk": 284,
+    "bannerOk": true,
+    "seedProblems": []
+   },
+   "b": {
+    "verdict": "PASS",
+    "rows": 844,
+    "equal": 844,
+    "failureCount": 0
+   },
+   "suites": {
+    "verdict": "PASS",
+    "suites": [
+     {
+      "label": "server",
+      "code": 0,
+      "verdict": "PASS",
+      "counts": {
+       "tests": 158,
+       "pass": 158,
+       "fail": 0,
+       "skipped": 0,
+       "cancelled": 0,
+       "failing": []
+      },
+      "note": null
+     },
+     {
+      "label": "parity",
+      "code": 0,
+      "verdict": "PASS",
+      "counts": {
+       "tests": 39,
+       "pass": 39,
+       "fail": 0,
+       "skipped": 0,
+       "cancelled": 0,
+       "failing": []
+      },
+      "note": null
+     },
+     {
+      "label": "match",
+      "code": 0,
+      "verdict": "PASS",
+      "counts": {
+       "tests": 86,
+       "pass": 86,
+       "fail": 0,
+       "skipped": 0,
+       "cancelled": 0,
+       "failing": []
+      },
+      "note": null
+     },
+     {
+      "label": "golden",
+      "code": 0,
+      "verdict": "PASS",
+      "counts": {
+       "tests": 140,
+       "pass": 140,
+       "fail": 0,
+       "skipped": 0,
+       "cancelled": 0,
+       "failing": []
+      },
+      "note": null
+     },
+     {
+      "label": "integration",
+      "code": 1,
+      "verdict": "PASS",
+      "counts": {
+       "tests": 107,
+       "pass": 104,
+       "fail": 3,
+       "skipped": 0,
+       "cancelled": 0,
+       "failing": [
+        "the wrappers: their derivation, ceilings, gate names, driver and the pinned analyser sha",
+        "canonical state: Node and our Python TwixtState give the same digest at every ply (G3 draw and a decisive game)",
+        "end to end through the real serve loop: TeacherClient, Python lockstep on twixtbot's Game, a fake network"
+       ]
+      },
+      "note": "only the linked-worktree .venv failures"
+     },
+     {
+      "label": "smoke",
+      "code": 0,
+      "verdict": "PASS",
+      "counts": {
+       "tests": 1,
+       "pass": 1,
+       "fail": 0,
+       "skipped": 0,
+       "cancelled": 0,
+       "failing": []
+      },
+      "note": null
+     },
+     {
+      "label": "lint",
+      "code": 0,
+      "verdict": "PASS",
+      "counts": {},
+      "note": null
+     },
+     {
+      "label": "wrapper",
+      "code": 0,
+      "verdict": "PASS",
+      "counts": {
+       "pass": 9,
+       "fail": 0,
+       "skipped": 0,
+       "summary": "============================== 9 passed in 1.47s ==============================="
+      },
+      "note": null
+     },
+     {
+      "label": "g0-server",
+      "code": 0,
+      "verdict": "PASS",
+      "counts": {
+       "tests": 66,
+       "pass": 66,
+       "fail": 0,
+       "skipped": 0,
+       "cancelled": 0,
+       "failing": []
+      },
+      "note": null
+     },
+     {
+      "label": "g0-match",
+      "code": 0,
+      "verdict": "PASS",
+      "counts": {
+       "tests": 66,
+       "pass": 66,
+       "fail": 0,
+       "skipped": 0,
+       "cancelled": 0,
+       "failing": []
+      },
+      "note": null
+     }
+    ]
+   }
+  }
+ },
+ "kill_s": 14400,
+ "pid": 68859,
+ "runtime": {
+  "node": "v24.22.0",
+  "onnxruntime_node": "1.23.2"
+ }
+}

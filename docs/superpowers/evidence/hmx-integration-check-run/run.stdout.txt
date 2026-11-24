@@ -1,0 +1,3 @@
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/627c8d774df838a8/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value

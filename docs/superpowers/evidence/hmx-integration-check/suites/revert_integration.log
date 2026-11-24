@@ -1,0 +1,186 @@
+✔ the gate is closed in the committed state (0.328875ms)
+✔ visitLeader: most visits, then higher prior, then (row, col) (0.100584ms)
+✔ studentStage reproduces protocolMove seed for seed and yields 10 Black positions (419.547125ms)
+✔ the 800 search uses the same seed: at the same budget it equals the 200 search exactly (286.564625ms)
+✔ a reproduction mismatch stops the stage (140.730833ms)
+✔ a game that is not the student as Black is refused (90.690917ms)
+✔ run refuses while the gate is closed, and creates nothing (30.921417ms)
+✔ the frozen groups: 110 Black games, 96 W / 12 L / 2 D, the replay table (2.529792ms)
+✔ aucLowerIsLoss, wilson and the bootstrap are correct and reproducible (1.094625ms)
+✔ signals: each fires only with all its conditions; priority readout > teacher > budget (0.243209ms)
+✔ analyse runs end to end on synthetic stage outputs, with draws kept separate (1803.393334ms)
+smoke pair 0 game 0: 25 plies, 2.5 s
+smoke pair 0 game 1: 26 plies, 2.6 s
+smoke pair 0 game 0: 25 plies, 2.5 s
+smoke pair 0 game 1: 26 plies, 2.6 s
+match pair 0 game 0: 25 plies, 2.5 s
+match pair 0 game 1: 26 plies, 2.6 s
+match pair 1 game 0: 25 plies, 2.5 s
+match pair 1 game 1: 25 plies, 2.5 s
+match pair 2 game 0: 25 plies, 2.5 s
+match pair 2 game 1: 26 plies, 2.6 s
+match pair 3 game 0: 25 plies, 2.5 s
+match pair 3 game 1: 26 plies, 2.6 s
+smoke pair 0 game 0: 25 plies, 2.5 s
+smoke pair 0 game 1: 26 plies, 2.6 s
+✔ both launch gates are closed in the committed state (0.516709ms)
+✔ preflight refuses a closed gate before reading anything else (the real state) (0.197791ms)
+✔ driver and analyser transcribe the same card constants (0.337083ms)
+✔ seeds: deterministic, 48-bit, re-derived identically by the analyser, and all distinct across both stages (57.781334ms)
+✔ the new-hard adapter is protocolMove with the given seeds (plies 0 and 23), reproducibly (478.850917ms)
+✔ the legacy adapter is computeBestMove's plain branch under HARD_MODE=legacy, and deterministic (573.939834ms)
+✔ playGame: colours, seeds for the new side only, the product end rule, and the score (6.991875ms)
+✔ playGame stops on the abort signal with no partial result (0.218333ms)
+✔ runStage stops VOID on a failed background-compute check, after that game's sidecar (2.537292ms)
+✔ timing: a valid smoke validates, and the card §5 formula gives the hand-computed ceiling (8.969917ms)
+✔ the analyser refuses tampered evidence (each against an untampered control) (74.427167ms)
+✔ the verdict rule: mean - sqrt(ln 20 / 220) > 0.5; 135.5 / 220 fails, 136 / 220 passes (0.214416ms)
+✔ a synthetic match validates under its timing and is scored (tiny spec, both outcomes) (49.820833ms)
+✔ the binding covers the driver's and analyser's whole import closure, minus the gate, deterministically (0.874625ms)
+✔ the committed binding equals a fresh computation (no file in it has moved) (225.791167ms)
+✔ the analyser judges the wrapper's outer record with the inner one (each failure against a clean control) (70.641417ms)
+✔ the driver's outer check agrees with the analyser's on every case (0.184875ms)
+✔ match admission requires committed, successful smoke evidence (each failure against a clean control) (0.404375ms)
+✔ match admission refuses in the real state: no smoke evidence is committed (50.094125ms)
+✔ the binding hashes the Node executable and every file of the two runtime packages (189.817584ms)
+✔ the check gate is a closed JavaScript gate, alone in its file (1.021041ms)
+✔ the driver refuses while the gate is closed, and on bad usage, writing nothing (114.287167ms)
+✔ B5: the preload serves the queue in order to an ESM named import, logs each value, and passes other calls through (57.815083ms)
+✔ B5: the preload fails closed: an exhausted queue throws, and it refuses to load without a valid queue (196.291792ms)
+✔ B5: under the preload the real protocolMove, unseeded, plays exactly what explicit seeds play (fake evaluator) (380.302125ms)
+✔ B5: no product file imports the preload or reads its queue variable (17.674875ms)
+✔ the replay sample is fixed: 41 games, 845 challenger rows, 844 current rows; 142 capture positions (9812.68275ms)
+✔ capture seeds are the namespaced sha256 prefixes, queued search then readout (0.157875ms)
+✔ the seed log check: a clean consumption passes; a missing, extra or reordered value fails (0.092667ms)
+✔ compareCaptures: exact and served rules pass their clean controls and fail each tamper (3.84375ms)
+✔ compareReplay: exact moves and budget; REST may omit nSimulations; each tamper fails (0.206458ms)
+✔ suiteVerdict: exit 0 passes; the revert tree accepts exactly the linked-worktree set and nothing else (0.46275ms)
+✔ recordProblems: a consistent record admits; a missing check or an unfounded verdict does not (0.147334ms)
+✔ B2: production server code differs from REF_COMMIT by exactly the planned hunk, or not at all (22.858083ms)
+✔ B2: every changed path is on the allowlist; server/test_hard_model.js is the one server test allowed to change (36.618625ms)
+✔ B2: the served constants are unchanged by value (0.124583ms)
+✔ the gates are closed in the committed state, and the file holds only the two declarations (0.64525ms)
+✔ openings: the pinned file, its sizes, and the analyser re-derives every listed opening (43.973125ms)
+✔ openings: Node re-derives all 402 Python-built openings, excluding the benchmark, G3 and every H-OP opening (84.395875ms)
+✔ schedule: 800 match games and 4 smoke games; pair p plays opening p, challenger Red in game 0 (0.378167ms)
+✔ seeds: the formula, the analyser re-derives them, all distinct and below 2^48 (404.093834ms)
+✔ a player is protocolMove with the derived seeds, move for move, and records 200 budgeted and 200 spent (486.759083ms)
+✔ the non-finite guard (H-OP's, imported) stops either side before a move is returned (0.65575ms)
+✔ export attempt 1 (the committed VOID record, entry 75) can never admit a match: only attempt 2 is read (873.948792ms)
+✔ end to end: one real game at 200 simulations, both sides fake networks through protocolMove, validates (34531.525958ms)
+✔ smoke admission binds the evidence to its run; timing reads wall times only over 800 games; each binding failure refuses (5964.348708ms)
+✔ per-move evidence: a 64-sim or 199-visit row, a missing, duplicate or extra row, or wrong seeds are INVALID (1493.92575ms)
+✔ the exact sign test: critical values, exact tails, and the 5% boundary decided in integers (1251.469208ms)
+✔ the verdict: PASS at the critical W, NON_PASS one below, and the reading says what each establishes (6.859708ms)
+✔ the mean guard turns a sign-test rejection into NON_PASS (0.75 pairs against 0 pairs) (2.417375ms)
+✔ the search-seconds guard: above 1.10x the current hard is INVALID and nothing is scored (352.534166ms)
+✔ export-record admission: missing, uncommitted, wrong kind or verdict, wrong sha, wrong dir, current id are refused (4.004125ms)
+✔ committed smoke evidence is checked before the match, through git (0.17025ms)
+✔ run refuses while each gate is closed, and creates nothing new (88.429083ms)
+✔ exit codes are set through process.exitCode, never process.exit() (0.263375ms)
+✔ both stages check the export wrapper before any model loads (source order in run) (0.120666ms)
+✖ the wrappers: their derivation, ceilings, gate names, driver and the pinned analyser sha (0.935209ms)
+✔ the gates are closed in the committed state (0.375ms)
+✔ openings: the pinned file, its sizes, and the analyser re-derives every listed opening (37.01775ms)
+✔ openings: Node re-derives the whole Python-built file, exclusions included (benchmark, G3, generation, smokes) (427.534ms)
+✔ openings (amendment 1): Node re-derives the generation extension -- the gen sequence continued past the frozen 4,000, distinct from every list (250.187542ms)
+✔ schedule: 544 match games and 4 smoke games; pair p plays opening p, challenger Red in game 0 (0.365708ms)
+✔ seeds: the formula, the analyser re-derives them, all distinct and below 2^48 (273.864ms)
+✔ a player is protocolMove with the derived seeds, move for move, and records 200 budgeted and 200 spent (479.9235ms)
+✔ the non-finite guard stops either side before a move is returned (0.927416ms)
+✔ end to end: one real game at 200 simulations, both sides fake networks through protocolMove, validates (91342.900292ms)
+✔ smoke admission binds the evidence to its run; timing reads wall times only; each binding failure refuses (5341.083709ms)
+✔ per-move evidence: a 64-sim or 199-visit row, a missing, duplicate or extra row, or wrong seeds are INVALID (866.264625ms)
+✔ the pass rule: 625/1088 passes and 624/1088 does not; analyse scores pairs and reads the verdict precisely (2.580292ms)
+✔ the search-seconds guard: above 1.10x the current hard is INVALID and nothing is scored (0.96325ms)
+✔ export-record admission: missing, uncommitted, wrong sha, wrong dir, same model id as current are refused (2.275917ms)
+✔ committed smoke evidence is checked before the match, through git (0.17975ms)
+✔ run refuses while the gate is closed, and creates nothing (84.5255ms)
+✔ exit codes are set through process.exitCode, never process.exit() (0.273708ms)
+✔ the wrappers: ceilings, gate names, driver and the pinned analyser sha (7.303625ms)
+✔ REGRESSION (handoff repair): an export that completed inside but timed out outside is refused before any model loads (2.875959ms)
+✔ both stages check the export wrapper before any model loads (source order in run) (0.115875ms)
+✔ the gates are closed in the committed state (0.360334ms)
+✔ openings: the analyser re-derives the driver's; distinct up to reflection; central; legal (96.07425ms)
+✔ schedule: 620 match games and 4 smoke games, colour-reversed pairs, arm P on arm N's openings (21.999583ms)
+✔ seeds: the analyser re-derives them; every reachable arm-P seed is distinct and below 2^48 (100.84375ms)
+✖ canonical state: Node and our Python TwixtState give the same digest at every ply (G3 draw and a decisive game) (1.776292ms)
+✔ canonical state: a bridge, winner or legal-set difference changes the digest (0.669333ms)
+✔ arm N: the mirror-averaged policy argmax, ties to the lower (row, col) (1.535541ms)
+✔ arm P: the student is protocolMove with the derived seeds, move for move (222.539ms)
+✔ one game: product end rule, the tb draw flag recorded but never ending play, and the analyser admits it (851.082333ms)
+✔ a canonical mismatch or an illegal teacher move stops the game (2.732042ms)
+✔ classification: Hoeffding half-widths, the boundaries and sweeps (0.086708ms)
+✔ analyse: per-arm scores, draws and colours; the reading follows arm N only (1.19625ms)
+✔ smoke admission binds the evidence to its run; the timing estimate reads wall times only (59409.408959ms)
+✔ per-move evidence: one row per played ply, and exactly 200 simulations spent on every arm P student move (69005.11775ms)
+✔ runtime pins and committed smoke evidence: checked before any model loads (1.283792ms)
+✔ run refuses while the gate is closed, and creates nothing (53.089583ms)
+✖ end to end through the real serve loop: TeacherClient, Python lockstep on twixtbot's Game, a fake network (1.820541ms)
+✔ non-finite student output: finite priors with a NaN value stop both arms before a move is returned (1.1055ms)
+✔ non-finite student output: a NaN or missing prior also stops, and a finite evaluation passes through unchanged (0.297667ms)
+ℹ tests 107
+ℹ suites 0
+ℹ pass 104
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 129823.668
+
+✖ failing tests:
+
+test at tests/htb_integration/test_mix_match.mjs:558:1
+✖ the wrappers: their derivation, ceilings, gate names, driver and the pinned analyser sha (0.935209ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  null !== 0
+  
+      at TestContext.<anonymous> (file:///Users/bill/projects/TwixT_Game-hmx-check-revert/tests/htb_integration/test_mix_match.mjs:561:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/htb_integration/test_teacher_bench.mjs:115:1
+✖ canonical state: Node and our Python TwixtState give the same digest at every ply (G3 draw and a decisive game) (1.776292ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  null !== 0
+  
+      at TestContext.<anonymous> (file:///Users/bill/projects/TwixT_Game-hmx-check-revert/tests/htb_integration/test_teacher_bench.mjs:121:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/htb_integration/test_teacher_bench.mjs:332:1
+✖ end to end through the real serve loop: TeacherClient, Python lockstep on twixtbot's Game, a fake network (1.820541ms)
+  Error: spawn /Users/bill/projects/TwixT_Game-hmx-check-revert/.venv/bin/python ENOENT
+      at ChildProcess._handle.onexit (node:internal/child_process:316:19)
+      at onErrorNT (node:internal/child_process:554:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'spawn /Users/bill/projects/TwixT_Game-hmx-check-revert/.venv/bin/python',
+    path: '/Users/bill/projects/TwixT_Game-hmx-check-revert/.venv/bin/python',
+    spawnargs: [ '-B', '-c', `import sys; sys.path.insert(0, "tests")\nfrom test_htb_bench_teacher import FakeTeacher, _twixt\nfrom scripts.GPU.alphazero import htb_bench_teacher as T\nsys.stdout.write('{"ok": true, "ready": true}\\n'); sys.stdout.flush()\nsys.exit(T.serve(T.BenchTeacher(FakeTeacher(), _twixt()[0]), sys.stdin, sys.stdout))` ]
+  }

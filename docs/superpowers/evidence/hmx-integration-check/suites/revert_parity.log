@@ -1,0 +1,67 @@
+
+> twixt_game@1.0.0 test:parity
+> node --test tests/parity/test_corpus.mjs tests/parity/test_compare.mjs
+
+▶ comparator evidence validation
+  ✔ control: the committed evidence passes and reproduces the tracked verdict (171.051667ms)
+  ✔ the control really does carry the full evidence it claims (0.146042ms)
+  ✔ rejects 1 of the required 10 MLX measurements (208.571875ms)
+  ✔ rejects an empty MLX permuted-logit array (195.558625ms)
+  ✔ rejects a truncated MLX payload (194.480834ms)
+  ✔ rejects a truncated permutation (195.626041ms)
+  ✔ rejects a permutation that repeats an index (198.415625ms)
+  ✔ rejects a permutation index outside the legal-move range (193.444209ms)
+  ✔ rejects duplicated positions padding the count (195.958625ms)
+  ✔ rejects a missing equivariance array entirely (199.125542ms)
+  ✔ rejects surfaces measured on different position sets (191.965792ms)
+  ✔ rejects surfaces measured under different permutations (194.542916ms)
+  ✔ still catches a genuine equivariance violation (193.566625ms)
+✔ comparator evidence validation (2353.901041ms)
+▶ determinism
+  ✔ regenerating reproduces the committed corpus byte for byte (676.71525ms)
+  ✔ the byte comparison would actually notice a formatting change (670.803167ms)
+  ✔ the seed allocation is fully accounted for (0.125541ms)
+  ✔ spread is total and evenly distributed (0.060125ms)
+✔ determinism (1348.136875ms)
+▶ legality — re-derived, not trusted
+  ✔ every move was legal at the moment it was played (590.058ms)
+  ✔ recorded ply, side to move, legal count and terminal status all re-derive (83.710584ms)
+  ✔ no position is terminal and every position has a legal move (0.116458ms)
+  ✔ side to move follows ply parity, so the colour split is structural (0.074584ms)
+✔ legality — re-derived, not trusted (674.110542ms)
+▶ uniqueness
+  ✔ all 126 positions are distinct under the canonical key (80.038208ms)
+  ✔ the key distinguishes bridge layout, not just pegs (0.11225ms)
+  ✔ move sequences are themselves distinct (0.329875ms)
+✔ uniqueness (80.565458ms)
+▶ strata and balance
+  ✔ 120 primary positions, exactly 30 per stratum (0.06875ms)
+  ✔ every primary position sits inside its stratum and hit its target ply (0.077709ms)
+  ✔ each side to move is at least 40% of the primary 120 (0.033875ms)
+  ✔ the aggregate gates are scoped to the primary set only (0.031708ms)
+✔ strata and balance (0.25375ms)
+▶ edge coverage
+  ✔ has exactly the six required, separately labelled cases (0.049833ms)
+  ✔ empty board is ply 0 with the maximum legal-move count (0.031042ms)
+  ✔ one-move case is ply 1 (0.0205ms)
+  ✔ fewest-legal case has the minimum legal-move count in the corpus (0.02325ms)
+  ✔ the >512 case exceeds 512 and is NOT the empty board (0.022583ms)
+  ✔ the two side-to-move cases are what they claim (0.015625ms)
+✔ edge coverage (0.21475ms)
+▶ the retry rule actually works
+  ✔ detects a target ply the game cannot reach (106.8855ms)
+  ✔ does not report ending early when the target is reached (2.106ms)
+  ✔ records zero rejections, and says why rather than hiding it (0.081541ms)
+✔ the retry rule actually works (109.124834ms)
+▶ no model-derived quantities
+  ✔ the corpus declares and contains only game-derived facts (0.130209ms)
+  ✔ no serialized tensor, logit, value or policy appears anywhere (0.311125ms)
+✔ no model-derived quantities (0.468416ms)
+ℹ tests 39
+ℹ suites 8
+ℹ pass 39
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2387.517416

@@ -1,0 +1,29 @@
+AlphaZero Inference Server
+==========================
+Model id:   c34b7ff3297c785a
+Manifest:   /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/manifest.json
+Model path: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+Provenance: source_checkpoint=checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+Hard mode:  protocol
+Hard model id:   627c8d774df838a8
+Hard manifest:   /Users/bill/projects/TwixT_Game-hmx-check/models/627c8d774df838a8/manifest.json
+Port: 61348
+Cache size: 10000
+
+Loading ONNX model...
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-hmx-check/models/627c8d774df838a8/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+
+Server running on http://localhost:61348
+WebSocket available at ws://localhost:61348/ws
+Endpoints:
+  POST /api/move             - Get best move (HTTP fallback)
+  POST /api/evaluate         - Quick position evaluation
+  POST /api/analyze-position - Deterministic MCTS analysis
+  GET  /api/health           - Health check
+  GET  /api/stats            - Cache statistics
+  WS   /ws                   - WebSocket for real-time MCTS
