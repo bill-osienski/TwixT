@@ -13569,3 +13569,18 @@ The proposal note and revision 1 note above stay as written. This correction sup
     commit it started from; the served code is byte-identical.
   - All gates are closed. No push and no hosted deployment were approved or done. The stale H-OP fix is untouched.
     See #225.
+
+#### Correction to Post-closure entry 82 (2026-11-24)
+
+- **What entry 82 got wrong:** under "Conclusion / status" it says the running server's `server_git_sha` "stays
+  `3108ba29`, the commit it started from". That is false.
+  - `/api/model-info` runs `git rev-parse --short HEAD` on every request (`server/index.js:248`), so it reports the
+    checkout's current HEAD, not the commit the process started from.
+  - After entry 82 was committed, the live endpoint reported `9c1ac125`; the user caught this.
+  - `engine.server_build_utc` is likewise the time of the request (`new Date()`, `server/index.js:265`), not a build
+    or start time.
+- **What stands:** `3108ba29..9c1ac125` changes only this ledger (45 lines added). The process started from
+  `3108ba29` and still serves the same code and models: `model_id c34b7ff3297c785a`, `hard_mode protocol`,
+  `hard_model_id 627c8d774df838a8`. This correction's own commit will move the reported value again.
+- **Consequence:** `server_git_sha` identifies the checkout, not the running process. Evidence about which code a
+  running server loaded must come from its start-up banner and log, or from the commit checked out at start.
