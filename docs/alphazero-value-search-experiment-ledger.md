@@ -326,6 +326,7 @@ knob) is not a new hypothesis.
 > **H-MX integration CHECK: gated run COMPLETED, all nine checks PASS; browser smoke V INCOMPLETE (Post-closure entry 80, 2026-11-23/24).** One wrapper run from launch `f46e90a7` (`49e94245` + gate), exit 0, 7,635 s under KILL 14,400 s, gate restored, no survivors (closing commit `d1f709f8`): G0, S1, S2 PASS; A0/A1/A2 reproduce all 845 recorded challenger rows in-process, over WS and over REST; S4 easy/medium identical to the reference (`abaf20be`) and hard served by `627c8d774df838a8`; R1 (restart with `HARD_MODEL_MANIFEST`) and R2 (revert of `78d69fad` then `cb404cf0`) restore today's hard exactly (426/426 captures, 844/844 rows); R2 suites PASS with exactly the three linked-worktree `.venv` failures, cause confirmed in the log. V (`1e5a7a86`): one Chrome game, 27 plies, every AI move from `627c8d774df838a8` in protocol mode, server log clean, end display ran — but the client console was not observed during play, so V is not a PASS and deployment is not recommended yet. `htb-integration-g1` stays at `abaf20be`; nothing deployed or pushed. See #223.
 > **H-MX browser smoke attempt 2 (V2): PASS (Post-closure entry 81, 2026-11-24).** One browser-only game from `545f7cee` against the unseeded staged server (plain `node server/index.js`, Hard `627c8d774df838a8`, protocol), with console and WebSocket capture started before the game (`b5c16485`): 25 plies, Hard won; 13/13 AI moves, including the opening move, from `627c8d774df838a8` with protocol search and 200 simulations, all on the board; MCTS bar updated on both sides of ply 20; client console clean from page load to game end; no WS error frames, no fallback; server log clean; the win alert was raised and dismissed and the winner panel shown. With the gated check's PASS (entry 80) every §5 check now passes. Attempt 1's INCOMPLETE record stands unchanged. Gate closed; nothing deployed or pushed; deployment awaits the user's separate decision. See #224.
 > **H-MX LOCAL DEPLOYMENT: DONE, no rollback (Post-closure entry 82, 2026-11-24).** `htb-integration-g1` fast-forwarded `abaf20be` → `3108ba29` (`--ff-only`); the local product started by `npm start` with no model overrides serves Hard `627c8d774df838a8` in protocol mode, and the default model stays `c34b7ff3297c785a` (`/api/model-info`, `server_git_sha 3108ba29`); the game page answers on port 5500. Local only: nothing pushed, no hosted deployment, all gates closed. Rollback by restart with `HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json` (tested, entry 80 R1). See #225.
+> **Hard-vs-teacher benchmark card DRAFTED: did the new Hard close some of the gap to the twixtbot teacher? Returned for review; nothing built, loaded or played (proposal note, 2026-11-24).** `docs/superpowers/2026-11-24-hard-teacher-benchmark-card.md`. New Hard `627c8d774df838a8` and previous Hard `78c16a31c3dba37f`, both as shipped (200-simulation protocol), against entry 65's unchanged teacher (mirror-averaged policy, argmax, no search), under our rules; 300 fresh 4-ply openings × 2 versions × 2 colours = 1,200 games, common seeds. Primary: mean paired difference D; CLOSER iff the exact one-sided sign-flip test gives p ≤ 0.05 and mean D > 0. Smallest gain worth detecting +0.05 (power 0.83–0.95, planning). Smoke 4 games; cap 24 h (planning 11.6 h). Entry 65's 11.8% context only. Needs a narrow #52/#195 exception. See #226.
 
 ## Historical proposal check — programme now closed
 
@@ -2184,6 +2185,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 223. **H-MX integration check and browser smoke (2026-11-23/24, entry 80).** Do **not**: re-run the gated check (it is spent and one-shot; its PASS stands on `d1f709f8`); relabel V as PASS, or recommend deployment, on the INCOMPLETE smoke (the client console was not observed during play); edit `v_record.json`, `v_server.log` or the run evidence; run another browser smoke without the user's approval, and if one is approved, start console tracking before the first move and expect the client's end-of-game `alert()` (it blocks browser automation until a person dismisses it); fast-forward `htb-integration-g1` or restart the product on the swap before the deployment decision; or merge the throwaway revert branch `hmx-integration-check-revert`.
 224. **H-MX browser smoke attempt 2 (2026-11-24, entry 81).** Do **not**: run a further browser smoke for this swap (V is now observed and PASSES; another game adds nothing to the §5 decision); edit or reinterpret attempt 1's `v_record.json` (it stays INCOMPLETE, superseded only by this new attempt); treat V2's PASS as a deployment approval (deployment, fast-forwarding `htb-integration-g1`, restarting the product server and pushing each need the user's own approval); or treat V2's single 25-ply game as strength evidence (strength rests on the match, entry 78).
 225. **H-MX local deployment (2026-11-24, entry 82).** Do **not**: push `htb-integration-g1` or any H-MX branch, or deploy to a hosted environment, without the user's own approval (only local deployment was approved); play a further smoke game for this swap (#224); roll back to `78c16a31c3dba37f` other than by the tested `HARD_MODEL_MANIFEST` restart override or the tested revert of `78d69fad` then `cb404cf0`; or read the local product's play as new strength evidence (strength rests on the match, entry 78).
+226. **The Hard-vs-teacher benchmark card (2026-11-24): drafted, paper only, awaiting review.** Do **not**: build, generate the opening list, start the teacher, load either Hard for it, open a gate or play any game before the user approves the narrow #52/#195 exception and the card, and later a launch review; stop or restart the local product server for it without the user; pool, re-score or extend entry 65 (its 0.118 is context only); use twixtbot in any other configuration, against any other subject, or for more than this card's 4 + 1,200 games; change the openings, exclusions, counts, test, pass rule or cap after any result; or read any outcome as an Elo, a gap size, twixtbot's strength under its own rules, or a deployment input.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -13584,3 +13586,82 @@ The proposal note and revision 1 note above stay as written. This correction sup
   `hard_model_id 627c8d774df838a8`. This correction's own commit will move the reported value again.
 - **Consequence:** `server_git_sha` identifies the checkout, not the running process. Evidence about which code a
   running server loaded must come from its start-up banner and log, or from the commit checked out at start.
+
+#### Proposal note — Hard-vs-teacher benchmark: did the new Hard close some of the gap to the twixtbot teacher? Card drafted; returned for review; nothing built, loaded, generated or played (2026-11-24)
+
+- **Request:** the user's. Draft a proposal comparing the new Hard (`627c8d774df838a8`) and the previous Hard
+  (`78c16a31c3dba37f`) against the pinned twixtbot teacher of entry 65.
+  - Both Hard versions use the shipped 200-simulation protocol.
+  - The teacher is unchanged: mirror-averaged policy, top move, no search. Our rules.
+  - The same fresh 4-ply openings for both versions, each version playing the teacher once as Red and once as Black,
+    so four games per opening. Openings already used in evaluation are excluded, including mirror equivalents.
+  - The paired score difference is primary. Each version's score (draws ½) and the uncertainty on the difference are
+    reported, with the historical 11.8% for context.
+  - Before any game: the smallest improvement worth detecting, the opening count, the pass rule, the timing smoke and
+    a fixed compute cap. Identify the narrow #52/#195 exception.
+- **Card:** `docs/superpowers/2026-11-24-hard-teacher-benchmark-card.md` (sha256 `79e99886…`). Planning simulation
+  and its output: `docs/superpowers/evidence/hard-teacher-bench-plan/`.
+- **Test:** the card's §§5–9.
+- **Hypothesis:** under our rules and the shipped protocol, the new Hard scores higher against the teacher than the
+  previous Hard: mean paired difference D > 0.
+- **Why it is plausible:**
+  - The H-MX fit moved the network toward the teacher on positions from Hard's own play (H-OP validation top-1
+    0.576 → 0.659, KL 0.707 → 0.452) and slightly on the original H-TB positions (top-1 0.651 → 0.660), entry 73.
+  - The new Hard beat the previous one head to head (entry 78: 0.519, decisive pairs 31–15).
+  - Against it: the head-to-head gain was small, and entry 65 found our search closed little of the gap to the
+    teacher (arm P − arm N +0.070). Closer imitation need not show up in play against the teacher itself.
+- **Design in brief:**
+  - **Subjects:** both versions through the product code path with explicit manifests, `protocolMove` at 200
+    simulations; 200 simulations and 200 visits enforced on every Hard move.
+  - **Teacher:** entry 65's identity, runtime and lockstep checks, unchanged.
+  - **Openings:** 300 fresh 4-ply openings by entry 65's hash rule in a new namespace
+    (`hard-teacher-bench/20261124`), plus 1 smoke opening. Equivalence is by position after ply 3, under all four
+    goal-preserving symmetries (identity, left-right, top-bottom, 180° rotation), so transposed move orders are caught.
+  - **Exclusions (card §5.1):**
+    - required, evaluation: 1,317 openings of 4 plies (entry 65, H-OP and H-MX matches and smokes, the August
+      product-stack pool, the twixtbot pilot, G3's first 4 plies);
+    - required, evaluation as prefixes: 324 six-ply T1j openings. The H3 pilot's 20 are not committed as a list; the
+      build re-derives them and must match digest `4027efe3…`, or stop;
+    - **added by me, for review:** 6,546 training openings (H-OP generation, smoke and extension; external-learning
+      Stage 1), because the new Hard was fitted on positions from H-OP's games.
+  - **Seeds:** common random numbers. The seed depends on stage, opening, colour and ply, not on the version.
+  - **Game end:** the product's rule only; twixtbot's early-draw flag recorded only.
+- **Primary result and pass rule:**
+  - D(o) = S_new(o) − S_prev(o), each S the mean of a version's two games at opening o (win 1, draw ½, loss 0).
+  - **CLOSER iff** the exact one-sided paired sign-flip test on Σ D gives p ≤ 0.05 and mean D > 0. Otherwise NOT
+    SHOWN, which is not evidence of no change. A lower-tail p ≤ 0.05 is flagged LOWER, descriptively.
+  - **Uncertainty on D:** a 95% Hoeffding interval (± 0.157 at 300 openings, distribution-free) and a 95% paired
+    bootstrap percentile interval (approximate).
+  - **Each version's score:** with a two-sided 95% Hoeffding interval (± 0.078). Entry 65's 0.118 is printed beside
+    the previous Hard's score and never pooled.
+- **Smallest improvement worth detecting:** +0.05 in mean score (about 0.118 → 0.168). Detecting +0.04 at 80% would
+  need about 400 openings (about 15.4 h).
+- **Openings needed:** 300. Planning power at +0.05 (exact sign-flip test, 3,000 runs per cell, entry 65 arm P's
+  per-colour rates, opening-level correlation ρ between the versions' games): 0.83 at ρ 0, 0.89 at ρ 0.36 (arm N vs
+  arm P's opening correlation), 0.95 at ρ 0.6. False CLOSER 0.043–0.048. The sign-flip test beat the sign test in
+  every cell at the same size.
+- **Timing smoke:** 1 opening, 4 games, TERM 3,590 s / KILL 3,600 s; outcomes never read. Projection
+  P = startup + 1,200 × (33.31 s × r + 1.32 s), with r the smoke's mean Hard-move time ÷ entry 65's 1,346 ms, so game
+  lengths come from 220 measured games. **LAUNCH_OK iff** 1.5 × P ≤ 86,400 s (r ≤ about 1.40) and the two versions'
+  mean move times are within 10% of each other; otherwise REVIEW.
+- **Fixed compute cap:** 24 h for the match (TERM 86,390 s, KILL 86,400 s), never raised; planning 11.6 h. The cap
+  holds up to a draw rate of about 11% (entry 65: 2.7%). A stopped run is VOID, with no partial score.
+- **Prediction on record (in the card, before any build):** low confidence. Previous Hard about 0.12 (0.07–0.18), new
+  Hard about 0.15 (0.09–0.22), mean D about +0.03 (−0.02 to +0.08). **CLOSER about a 35% chance.**
+- **The exception needed (card §2):**
+  - **#52** requires that a future twixtbot opponent have its own scope. **#195** limited twixtbot play to entry 65's
+    4 + 620 games and forbids extending or re-scoring that benchmark.
+  - Requested: twixtbot's pinned network as an opponent **only** at entry 65's teacher configuration, against exactly
+    these two Hard versions as shipped, on this card's openings and seeds, for one run of **4 smoke games and 1,200
+    scored games**.
+  - Not covered: any anchor use, twixtbot's own player or `trials`, any other subject or configuration, any change
+    after a result, reruns or top-ups (of this run or entry 65's), rules changes or handicaps, and any use of these
+    games as training data.
+- **Decision rule:** CLOSER supports only the statement that the H-MX update moved Hard toward its teacher in play
+  under this protocol. NOT SHOWN supports nothing. Neither changes the deployment, opens a gate or authorizes
+  training.
+- **Machine conditions:** BOINC quit, Unreal Editor closed, the idle gate passed, and the local product server **not
+  running** during the smoke or the match (the wrapper would refuse). Stopping and restarting it is the user's call.
+- **Status:** a draft. The card and the narrow #52/#195 exception need the user's approval; then a model-free build,
+  a launch review, and the smoke and match each with their own approval. Nothing was built, loaded, generated or
+  played; all gates are closed. See #226.

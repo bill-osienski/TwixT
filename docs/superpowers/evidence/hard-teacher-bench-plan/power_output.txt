@@ -1,0 +1,34 @@
+# Planning power, paired Hard-vs-teacher benchmark card (2026-11-24). Model-free: no model, teacher or game.
+# Inputs: entry 65 arm P per-colour W/D/L (Red 18/6/86, Black 5/0/105), read from
+# docs/superpowers/evidence/htb-teacher-bench-match/games/P_*.json; nothing else from any run.
+# "sign" = exact one-sided sign test over openings with D != 0; "flip" = exact one-sided paired sign-flip test on sum D;
+# both also require mean D > 0. alpha 0.05.
+#
+# .venv/bin/python -I power.py 400   (400 runs per cell)
+base score 0.1182
+rho 0.0 delta 0.0: n150: sign 0.02 flip 0.04 | n200: sign 0.04 flip 0.04 | n250: sign 0.04 flip 0.05 | n300: sign 0.06 flip 0.06 | n400: sign 0.06 flip 0.06
+rho 0.0 delta 0.04: n150: sign 0.34 flip 0.41 | n200: sign 0.44 flip 0.49 | n250: sign 0.52 flip 0.58 | n300: sign 0.61 flip 0.69 | n400: sign 0.77 flip 0.81
+rho 0.0 delta 0.05: n150: sign 0.48 flip 0.58 | n200: sign 0.56 flip 0.64 | n250: sign 0.71 flip 0.76 | n300: sign 0.77 flip 0.83 | n400: sign 0.90 flip 0.92
+rho 0.0 delta 0.06: n150: sign 0.64 flip 0.68 | n200: sign 0.70 flip 0.77 | n250: sign 0.83 flip 0.88 | n300: sign 0.88 flip 0.91 | n400: sign 0.96 flip 0.98
+rho 0.0 delta 0.08: n150: sign 0.85 flip 0.88 | n200: sign 0.90 flip 0.94 | n250: sign 0.97 flip 0.99 | n300: sign 0.98 flip 0.99 | n400: sign 1.00 flip 1.00
+rho 0.36 delta 0.0: n150: sign 0.04 flip 0.04 | n200: sign 0.03 flip 0.04 | n250: sign 0.03 flip 0.03 | n300: sign 0.04 flip 0.04 | n400: sign 0.07 flip 0.06
+rho 0.36 delta 0.04: n150: sign 0.43 flip 0.49 | n200: sign 0.49 flip 0.55 | n250: sign 0.61 flip 0.67 | n300: sign 0.70 flip 0.75 | n400: sign 0.82 flip 0.86
+rho 0.36 delta 0.05: n150: sign 0.57 flip 0.62 | n200: sign 0.66 flip 0.70 | n250: sign 0.79 flip 0.85 | n300: sign 0.86 flip 0.90 | n400: sign 0.94 flip 0.95
+rho 0.36 delta 0.06: n150: sign 0.69 flip 0.76 | n200: sign 0.79 flip 0.85 | n250: sign 0.92 flip 0.94 | n300: sign 0.95 flip 0.97 | n400: sign 0.98 flip 0.98
+rho 0.36 delta 0.08: n150: sign 0.89 flip 0.94 | n200: sign 0.94 flip 0.96 | n250: sign 0.98 flip 0.99 | n300: sign 1.00 flip 1.00 | n400: sign 1.00 flip 1.00
+rho 0.6 delta 0.0: n150: sign 0.04 flip 0.05 | n200: sign 0.04 flip 0.04 | n250: sign 0.04 flip 0.04 | n300: sign 0.04 flip 0.05 | n400: sign 0.05 flip 0.05
+rho 0.6 delta 0.04: n150: sign 0.48 flip 0.56 | n200: sign 0.62 flip 0.66 | n250: sign 0.72 flip 0.75 | n300: sign 0.82 flip 0.84 | n400: sign 0.89 flip 0.91
+rho 0.6 delta 0.05: n150: sign 0.68 flip 0.73 | n200: sign 0.78 flip 0.81 | n250: sign 0.87 flip 0.92 | n300: sign 0.95 flip 0.97 | n400: sign 0.97 flip 0.98
+rho 0.6 delta 0.06: n150: sign 0.81 flip 0.86 | n200: sign 0.89 flip 0.92 | n250: sign 0.95 flip 0.97 | n300: sign 0.99 flip 0.99 | n400: sign 0.99 flip 0.99
+rho 0.6 delta 0.08: n150: sign 0.97 flip 0.98 | n200: sign 0.97 flip 0.98 | n250: sign 1.00 flip 1.00 | n300: sign 1.00 flip 1.00 | n400: sign 1.00 flip 1.00
+#
+# .venv/bin/python power2.py 3000   (3,000 runs per cell; used in the card)
+n 250 rho 0.0: d0.0: sign 0.046 flip 0.045 | d0.05: sign 0.693 flip 0.748 | d0.06: sign 0.824 flip 0.873
+n 250 rho 0.36: d0.0: sign 0.040 flip 0.046 | d0.05: sign 0.785 flip 0.824 | d0.06: sign 0.907 flip 0.937
+n 250 rho 0.6: d0.0: sign 0.040 flip 0.043 | d0.05: sign 0.879 flip 0.909 | d0.06: sign 0.958 flip 0.973
+n 300 rho 0.0: d0.0: sign 0.043 flip 0.043 | d0.05: sign 0.771 flip 0.833 | d0.06: sign 0.886 flip 0.926
+n 300 rho 0.36: d0.0: sign 0.046 flip 0.048 | d0.05: sign 0.845 flip 0.889 | d0.06: sign 0.937 flip 0.958
+n 300 rho 0.6: d0.0: sign 0.040 flip 0.047 | d0.05: sign 0.932 flip 0.950 | d0.06: sign 0.983 flip 0.989
+n 350 rho 0.0: d0.0: sign 0.045 flip 0.045 | d0.05: sign 0.837 flip 0.880 | d0.06: sign 0.926 flip 0.956
+n 350 rho 0.36: d0.0: sign 0.038 flip 0.043 | d0.05: sign 0.911 flip 0.937 | d0.06: sign 0.972 flip 0.984
+n 350 rho 0.6: d0.0: sign 0.046 flip 0.054 | d0.05: sign 0.959 flip 0.972 | d0.06: sign 0.991 flip 0.995
